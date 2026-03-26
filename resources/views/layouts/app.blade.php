@@ -8,7 +8,7 @@
     <title>@yield('title', 'Dashboard') - Administrasi PPLC IPPI</title>
     
     <!-- Favicon -->
-    <link rel="icon" type="image/png" href="{{ asset('images/logo-ipai.png') }}">
+    <link rel="icon" type="image/png" href="{{ asset('images/LOGO-IPPI.jpg') }}">
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.bunny.net">
@@ -53,5 +53,16 @@
     </div>
     
     @stack('scripts')
+    <script>
+        // Detect browser timezone and store in cookie so server can use it
+        (function() {
+            try {
+                var tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                if (tz) {
+                    document.cookie = 'user_timezone=' + encodeURIComponent(tz) + '; path=/; max-age=86400; SameSite=Lax';
+                }
+            } catch(e) {}
+        })();
+    </script>
 </body>
 </html>

@@ -86,9 +86,14 @@ class UserController extends Controller
         // Only users with permission can manage users
         abort_unless(auth()->user()->hasPermission('edit-user'), 403);
 
-        $user->load('employee');
+        $user->load(['employee', 'sections']);
+        $roles = \App\Models\Role::orderBy('name')->get();
+        $sections = \App\Models\Section::orderBy('name')->get();
+        
+        // Get user's assigned section IDs
+        $userSectionIds = $user->sections->pluck('id')->toArray();
 
-        return view('users.edit', compact('user'));
+        return view('users.edit', compact('user', 'roles', 'sections', 'userSectionIds'));
     }
 
     /**
@@ -101,6 +106,7 @@ class UserController extends Controller
 
         $data = [
             'email' => $request->email,
+            'role_id' => $request->role_id,
         ];
 
         // Only update password if provided
@@ -109,6 +115,14 @@ class UserController extends Controller
         }
 
         $user->update($data);
+        
+        // Sync sections for Supervisor/Manager
+        if ($request->has('section_ids')) {
+            $user->sections()->sync($request->section_ids);
+        } else {
+            // Clear all sections if none selected
+            $user->sections()->detach();
+        }
 
         return redirect()->route('users.index')
             ->with('success', 'User berhasil diperbarui');

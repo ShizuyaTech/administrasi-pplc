@@ -92,7 +92,7 @@
                 </div>
                 <div>
                     <label for="estimated_cost" class="block text-sm font-medium text-gray-700 mb-2">Estimasi Biaya (Rp)</label>
-                    <input type="number" id="estimated_cost" name="estimated_cost" value="{{ old('estimated_cost') }}" min="0" step="1000" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 @error('estimated_cost') border-red-500 @enderror">
+                    <input type="number" id="estimated_cost" name="estimated_cost" value="{{ old('estimated_cost') }}" min="0" step="1" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 @error('estimated_cost') border-red-500 @enderror">
                     @error('estimated_cost')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                 </div>
             </div>
@@ -121,7 +121,7 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                     <div>
                         <label for="card_usage_amount" class="block text-sm font-medium text-gray-700 mb-2">Jumlah Pemakaian (Rp)</label>
-                        <input type="number" id="card_usage_amount" name="card_usage_amount" min="0" step="1000" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
+                        <input type="number" id="card_usage_amount" name="card_usage_amount" min="0" step="1" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
                         <p class="mt-1 text-xs text-gray-500">Total tol + parkir</p>
                     </div>
                     

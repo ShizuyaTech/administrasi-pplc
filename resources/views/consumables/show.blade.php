@@ -102,7 +102,7 @@
                 @foreach($consumable->stockMovements as $movement)
                 <tr class="{{ $movement->type === 'in' ? 'bg-green-50' : 'bg-red-50' }}">
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {{ $movement->created_at->format('d/m/Y H:i') }}
+                        {{ toUserTime($movement->created_at, 'd/m/Y H:i') }}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm">
                         @if($movement->type === 'in')

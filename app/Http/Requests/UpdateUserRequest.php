@@ -25,6 +25,7 @@ class UpdateUserRequest extends FormRequest
         return [
             'email' => ['required', 'email', Rule::unique('users')->ignore($this->user)],
             'password' => ['nullable', 'string', 'min:8', 'confirmed'],
+            'role_id' => ['required', 'exists:roles,id'],
         ];
     }
 
@@ -41,6 +42,8 @@ class UpdateUserRequest extends FormRequest
             'email.unique' => 'Email sudah digunakan',
             'password.min' => 'Password minimal 8 karakter',
             'password.confirmed' => 'Konfirmasi password tidak cocok',
+            'role_id.required' => 'Role harus dipilih',
+            'role_id.exists' => 'Role tidak valid',
         ];
     }
 }

@@ -47,7 +47,7 @@
 
             <div class="mb-6">
                 <label for="current_balance" class="block text-sm font-medium text-gray-700 mb-2">Saldo Awal (Rp) <span class="text-red-500">*</span></label>
-                <input type="number" id="current_balance" name="current_balance" value="{{ old('current_balance', 0) }}" required min="0" step="1000" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 @error('current_balance') border-red-500 @enderror">
+                <input type="number" id="current_balance" name="current_balance" value="{{ old('current_balance', 0) }}" required min="0" step="1" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 @error('current_balance') border-red-500 @enderror">
                 @error('current_balance')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                 <p class="mt-1 text-xs text-gray-500">Masukkan saldo saat kartu pertama kali ditambahkan</p>
             </div>

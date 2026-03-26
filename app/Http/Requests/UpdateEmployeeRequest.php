@@ -30,7 +30,7 @@ class UpdateEmployeeRequest extends FormRequest
             'section_id' => ['required', 'exists:sections,id'],
             'position' => ['required', 'string', 'max:100'],
             'shift' => ['required', 'in:Shift A,Shift B,Non Shift'],
-            'role_id' => ['required', 'exists:roles,id'],
+            'role_id' => ['nullable', 'exists:roles,id'],
             'is_active' => ['sometimes', 'boolean'],
         ];
     }
@@ -45,7 +45,7 @@ class UpdateEmployeeRequest extends FormRequest
             'position.required' => 'Jabatan harus diisi.',
             'shift.required' => 'Shift harus dipilih.',
             'shift.in' => 'Shift tidak valid.',
-            'role_id.required' => 'Role harus dipilih.',
+
         ];
     }
 }

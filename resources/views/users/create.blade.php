@@ -28,7 +28,7 @@
                                 data-section="{{ $employee->section->name }}"
                                 data-position="{{ $employee->position }}"
                                 data-shift="{{ $employee->shift }}"
-                                data-role="{{ $employee->role->name }}">
+                                data-role="{{ $employee->role?->name ?? '' }}">
                             {{ $employee->nrp }} - {{ $employee->name }} ({{ $employee->section->name }})
                         </option>
                     @endforeach

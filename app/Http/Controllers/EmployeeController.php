@@ -133,12 +133,48 @@ class EmployeeController extends Controller
         $data = $request->validated();
         $data['is_active'] = $request->has('is_active') ? true : false;
         
+        // Save old section_id for comparison
+        $oldSectionId = $employee->section_id;
+        
         // Users without manage-all-sections permission cannot change section
         if (!$user->canManageAllSections()) {
             unset($data['section_id']);
         }
         
         $employee->update($data);
+        
+        // Sync data to User if employee has a user account
+        $employeeUser = \App\Models\User::where('employee_id', $employee->id)->first();
+        if ($employeeUser) {
+            $syncData = [];
+            
+            // Sync name
+            if (isset($data['name']) && $data['name'] != $employeeUser->name) {
+                $syncData['name'] = $data['name'];
+            }
+            
+            // Sync section if changed
+            if (isset($data['section_id']) && $data['section_id'] != $oldSectionId) {
+                $syncData['section_id'] = $data['section_id'];
+            }
+            
+            // Sync shift if changed (map enum to integer)
+            if (isset($data['shift'])) {
+                $shiftMapping = [
+                    'Shift A' => 1,
+                    'Shift B' => 2,
+                    'Non Shift' => null,
+                ];
+                $userShift = $shiftMapping[$data['shift']] ?? null;
+                if ($userShift != $employeeUser->shift) {
+                    $syncData['shift'] = $userShift;
+                }
+            }
+            
+            if (!empty($syncData)) {
+                $employeeUser->update($syncData);
+            }
+        }
         
         return redirect()->route('employees.index')->with('success', 'Data karyawan berhasil diperbarui.');
     }

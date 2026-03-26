@@ -108,9 +108,13 @@
                             {{ $employee->position }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="px-2 py-1 text-xs font-medium bg-purple-100 text-purple-800 rounded">
-                                {{ $employee->role->name }}
-                            </span>
+                            @if($employee->role)
+                                <span class="px-2 py-1 text-xs font-medium bg-purple-100 text-purple-800 rounded">
+                                    {{ $employee->role->name }}
+                                </span>
+                            @else
+                                <span class="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-500 rounded">Tidak Ada</span>
+                            @endif
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-center">
                             @if($employee->is_active)

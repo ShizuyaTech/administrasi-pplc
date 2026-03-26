@@ -41,6 +41,7 @@
     <nav class="flex-1 overflow-y-auto py-4 px-3 scrollbar-hide">
         <div class="space-y-1">
             <!-- Dashboard -->
+            @if(auth()->user()->hasPermission('view-dashboard'))
             <a href="{{ route('dashboard') }}" 
                class="flex items-center space-x-3 px-4 py-3 text-gray-700 rounded-lg hover:bg-indigo-50 hover:text-indigo-600 transition {{ request()->routeIs('dashboard') ? 'bg-indigo-50 text-indigo-600' : '' }}">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -48,8 +49,10 @@
                 </svg>
                 <span class="font-medium">Dashboard</span>
             </a>
+            @endif
 
             <!-- Absensi -->
+            @if(auth()->user()->hasPermission('view-absences'))
             <a href="{{ route('absences.index') }}" 
                class="flex items-center space-x-3 px-4 py-3 text-gray-700 rounded-lg hover:bg-indigo-50 hover:text-indigo-600 transition {{ request()->routeIs('absences.*') ? 'bg-indigo-50 text-indigo-600' : '' }}">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -57,8 +60,10 @@
                 </svg>
                 <span class="font-medium">Absensi</span>
             </a>
+            @endif
 
             <!-- Overtime -->
+            @if(auth()->user()->hasPermission('view-overtimes'))
             <a href="{{ route('overtimes.index') }}" 
                class="flex items-center space-x-3 px-4 py-3 text-gray-700 rounded-lg hover:bg-indigo-50 hover:text-indigo-600 transition {{ request()->routeIs('overtimes.*') ? 'bg-indigo-50 text-indigo-600' : '' }}">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -66,8 +71,10 @@
                 </svg>
                 <span class="font-medium">Overtime</span>
             </a>
+            @endif
 
             <!-- Surat Perjalanan Dinas -->
+            @if(auth()->user()->hasPermission('view-business-trips'))
             <a href="{{ route('business-trips.index') }}" 
                class="flex items-center space-x-3 px-4 py-3 text-gray-700 rounded-lg hover:bg-indigo-50 hover:text-indigo-600 transition {{ request()->routeIs('business-trips.*') ? 'bg-indigo-50 text-indigo-600' : '' }}">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -75,6 +82,7 @@
                 </svg>
                 <span class="font-medium">Surat Perjalanan Dinas</span>
             </a>
+            @endif
 
             <!-- Divider - Master Data -->
             @php
@@ -135,6 +143,22 @@
             @endif
             @endif
 
+            <!-- E-Signature (for Supervisor/Manager) -->
+            @if(auth()->user()->isSupervisor() || auth()->user()->isManager() || auth()->user()->canManageAllSections())
+            <div class="pt-4 mt-4 border-t border-gray-200">
+                <a href="{{ route('profile.signature') }}" 
+                   class="flex items-center space-x-3 px-4 py-3 text-gray-700 rounded-lg hover:bg-indigo-50 hover:text-indigo-600 transition {{ request()->routeIs('profile.signature') ? 'bg-indigo-50 text-indigo-600' : '' }}">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+                    </svg>
+                    <span class="font-medium">Upload E-Signature</span>
+                    @if(!auth()->user()->hasSignature())
+                    <span class="px-2 py-0.5 text-xs bg-yellow-100 text-yellow-700 rounded-full">!</span>
+                    @endif
+                </a>
+            </div>
+            @endif
+
             <!-- Divider - Settings -->
             @php
                 $canViewUsers = auth()->user()->hasPermission('view-users');
@@ -149,10 +173,10 @@
             </div>
 
             <!-- Manage User Dropdown -->
-            <div x-data="{ open: {{ request()->routeIs('users.*') || request()->routeIs('roles.*') || request()->routeIs('permissions.*') ? 'true' : 'false' }} }">
+            <div x-data="{ open: {{ request()->routeIs('users.*') || request()->routeIs('roles.*') || request()->routeIs('permissions.*') || request()->routeIs('sections.*') ? 'true' : 'false' }} }">
                 <!-- Dropdown Trigger -->
                 <button @click="open = !open" 
-                        class="w-full flex items-center justify-between px-4 py-3 text-gray-700 rounded-lg hover:bg-indigo-50 hover:text-indigo-600 transition {{ request()->routeIs('users.*') || request()->routeIs('roles.*') || request()->routeIs('permissions.*') ? 'bg-indigo-50 text-indigo-600' : '' }}">
+                        class="w-full flex items-center justify-between px-4 py-3 text-gray-700 rounded-lg hover:bg-indigo-50 hover:text-indigo-600 transition {{ request()->routeIs('users.*') || request()->routeIs('roles.*') || request()->routeIs('permissions.*') || request()->routeIs('sections.*') ? 'bg-indigo-50 text-indigo-600' : '' }}">
                     <div class="flex items-center space-x-3">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
@@ -198,11 +222,22 @@
                     <!-- Manajemen Permission -->
                     @if($canViewPermissions)
                     <a href="{{ route('permissions.index') }}" 
-                       class="flex items-center space-x-3 px-4 py-2 text-sm text-gray-600 rounded-lg hover:bg-indigo-50 hover:text-indigo-600 transition {{ request()->routeIs('permissions.*') ? 'bg-indigo-50 text-indigo-600' : '' }}">
+                       class="flex items-center space-x-3 px-4 py-2 text-sm text-gray-600 rounded-lg hover:bg-indigo-50 hover:text-indigo-600 transition {{ request()->routeIs('permissions.*') && !request()->routeIs('sections.*') ? 'bg-indigo-50 text-indigo-600' : '' }}">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
                         </svg>
                         <span>Manajemen Permission</span>
+                    </a>
+                    @endif
+
+                    <!-- Manajemen Section -->
+                    @if(auth()->user()->isSuperAdmin())
+                    <a href="{{ route('sections.index') }}" 
+                       class="flex items-center space-x-3 px-4 py-2 text-sm text-gray-600 rounded-lg hover:bg-indigo-50 hover:text-indigo-600 transition {{ request()->routeIs('sections.*') ? 'bg-indigo-50 text-indigo-600' : '' }}">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                        </svg>
+                        <span>Manajemen Section</span>
                     </a>
                     @endif
                 </div>

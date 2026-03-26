@@ -45,9 +45,13 @@
 
                 <div>
                     <h3 class="text-sm font-medium text-gray-500 mb-2">Role</h3>
-                    <span class="inline-block px-3 py-1 bg-purple-100 text-purple-800 text-sm font-medium rounded">
-                        {{ $employee->role->name }}
-                    </span>
+                    @if($employee->role)
+                        <span class="inline-block px-3 py-1 bg-purple-100 text-purple-800 text-sm font-medium rounded">
+                            {{ $employee->role->name }}
+                        </span>
+                    @else
+                        <span class="inline-block px-3 py-1 bg-gray-100 text-gray-500 text-sm font-medium rounded">Tidak Ada</span>
+                    @endif
                 </div>
 
                 <div>
@@ -65,12 +69,12 @@
 
                 <div>
                     <h3 class="text-sm font-medium text-gray-500 mb-2">Terdaftar Sejak</h3>
-                    <p class="text-gray-900">{{ $employee->created_at->format('d M Y H:i') }}</p>
+                    <p class="text-gray-900">{{ toUserTime($employee->created_at, 'd M Y H:i') }}</p>
                 </div>
 
                 <div>
                     <h3 class="text-sm font-medium text-gray-500 mb-2">Terakhir Diperbarui</h3>
-                    <p class="text-gray-900">{{ $employee->updated_at->format('d M Y H:i') }}</p>
+                    <p class="text-gray-900">{{ toUserTime($employee->updated_at, 'd M Y H:i') }}</p>
                 </div>
             </div>
         </div>

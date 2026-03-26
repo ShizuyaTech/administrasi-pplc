@@ -43,11 +43,11 @@
                     </div>
                     <div>
                         <span class="block text-sm font-medium text-gray-500">Terdaftar Sejak</span>
-                        <span class="block text-base text-gray-900 mt-1">{{ $user->created_at->format('d F Y, H:i') }}</span>
+                        <span class="block text-base text-gray-900 mt-1">{{ toUserTime($user->created_at, 'd F Y, H:i') }}</span>
                     </div>
                     <div>
                         <span class="block text-sm font-medium text-gray-500">Terakhir Diperbarui</span>
-                        <span class="block text-base text-gray-900 mt-1">{{ $user->updated_at->format('d F Y, H:i') }}</span>
+                        <span class="block text-base text-gray-900 mt-1">{{ toUserTime($user->updated_at, 'd F Y, H:i') }}</span>
                     </div>
                 </div>
             </div>

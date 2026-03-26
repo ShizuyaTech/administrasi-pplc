@@ -25,6 +25,7 @@ class User extends Authenticatable
         'role_id',
         'section_id',
         'shift',
+        'signature_path',
     ];
 
     /**
@@ -66,6 +67,15 @@ class User extends Authenticatable
         return $this->belongsTo(Section::class);
     }
 
+    /**
+     * Many-to-Many: Sections that Supervisor/Manager can manage
+     */
+    public function sections()
+    {
+        return $this->belongsToMany(Section::class, 'section_user')
+                    ->withTimestamps();
+    }
+
     // Helper methods
     public function isSuperAdmin()
     {
@@ -81,7 +91,22 @@ class User extends Authenticatable
 
     public function canAccessSection($sectionId)
     {
-        return $this->canManageAllSections() || $this->section_id == $sectionId;
+        // Super admin can access all sections
+        if ($this->canManageAllSections()) {
+            return true;
+        }
+        
+        // Check primary section (from employee)
+        if ($this->section_id == $sectionId) {
+            return true;
+        }
+        
+        // Check if user has this section in their managed sections (for Supervisor/Manager)
+        if ($this->isSupervisor() || $this->isManager()) {
+            return $this->sections()->where('sections.id', $sectionId)->exists();
+        }
+        
+        return false;
     }
 
     /**
@@ -98,7 +123,8 @@ class User extends Authenticatable
      */
     public function canApproveOvertimes()
     {
-        return $this->hasPermission('approve-overtime') || 
+        return $this->hasPermission('approve-overtime-supervisor') || 
+               $this->hasPermission('approve-overtime-manager') ||
                $this->hasPermission('manage-overtimes');
     }
 
@@ -150,5 +176,68 @@ class User extends Authenticatable
                stripos($roleName, 'foreman') !== false ||
                str_contains($roleName, 'kepala') ||
                str_contains($roleName, 'mandor');
+    }
+
+    /**
+     * Check if user is Supervisor (can approve overtime tahap 1)
+     */
+    public function isSupervisor()
+    {
+        return $this->hasPermission('approve-overtime-supervisor');
+    }
+
+    /**
+     * Check if user is Manager (can approve overtime tahap 2)
+     */
+    public function isManager()
+    {
+        return $this->hasPermission('approve-overtime-manager');
+    }
+
+    /**
+     * Check if user has uploaded signature
+     */
+    public function hasSignature()
+    {
+        return !empty($this->signature_path) && 
+               file_exists(public_path('storage/' . $this->signature_path));
+    }
+
+    /**
+     * Get signature URL
+     */
+    public function getSignatureUrlAttribute()
+    {
+        if ($this->hasSignature()) {
+            return asset('storage/' . $this->signature_path);
+        }
+        return null;
+    }
+
+    /**
+     * Get all section IDs that user can access
+     * (For Supervisor/Manager with multiple sections)
+     */
+    public function getAccessibleSectionIds()
+    {
+        // Super admin can access all
+        if ($this->canManageAllSections()) {
+            return Section::pluck('id')->toArray();
+        }
+        
+        $sectionIds = [];
+        
+        // Add primary section (from employee)
+        if ($this->section_id) {
+            $sectionIds[] = $this->section_id;
+        }
+        
+        // Add managed sections (for Supervisor/Manager)
+        if ($this->isSupervisor() || $this->isManager()) {
+            $managedSectionIds = $this->sections()->pluck('sections.id')->toArray();
+            $sectionIds = array_merge($sectionIds, $managedSectionIds);
+        }
+        
+        return array_unique($sectionIds);
     }
 }

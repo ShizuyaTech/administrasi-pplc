@@ -72,15 +72,27 @@ class PermissionSeeder extends Seeder
                 'group' => 'overtimes',
             ],
             [
-                'name' => 'Approve Overtime',
-                'slug' => 'approve-overtime',
-                'description' => 'Can approve/reject overtime',
+                'name' => 'Approve Overtime as Supervisor',
+                'slug' => 'approve-overtime-supervisor',
+                'description' => 'Can approve/reject overtime at supervisor stage',
+                'group' => 'overtimes',
+            ],
+            [
+                'name' => 'Approve Overtime as Manager',
+                'slug' => 'approve-overtime-manager',
+                'description' => 'Can approve/reject overtime at manager stage',
                 'group' => 'overtimes',
             ],
             [
                 'name' => 'Export Overtimes',
                 'slug' => 'export-overtimes',
                 'description' => 'Can export overtime data',
+                'group' => 'overtimes',
+            ],
+            [
+                'name' => 'Print Overtime Report',
+                'slug' => 'print-overtime-report',
+                'description' => 'Can print/generate overtime report with signatures',
                 'group' => 'overtimes',
             ],
 
@@ -132,6 +144,32 @@ class PermissionSeeder extends Seeder
                 'slug' => 'export-business-trips',
                 'description' => 'Can export business trip data',
                 'group' => 'business-trips',
+            ],
+
+            // Cards (E-Money)
+            [
+                'name' => 'View Cards',
+                'slug' => 'view-card',
+                'description' => 'Can view e-money cards',
+                'group' => 'cards',
+            ],
+            [
+                'name' => 'Create Card',
+                'slug' => 'create-card',
+                'description' => 'Can create new e-money card',
+                'group' => 'cards',
+            ],
+            [
+                'name' => 'Edit Card',
+                'slug' => 'edit-card',
+                'description' => 'Can edit e-money card',
+                'group' => 'cards',
+            ],
+            [
+                'name' => 'Delete Card',
+                'slug' => 'delete-card',
+                'description' => 'Can delete e-money card',
+                'group' => 'cards',
             ],
 
             // Consumables
@@ -332,6 +370,29 @@ class PermissionSeeder extends Seeder
         if ($superAdminRole) {
             $allPermissions = Permission::all()->pluck('id');
             $superAdminRole->permissions()->sync($allPermissions);
+        }
+
+        // Auto-assign supervisor approval permissions to Supervisor role
+        $supervisorRole = Role::where('name', 'Supervisor')->first();
+        if ($supervisorRole) {
+            $supervisorPermissions = Permission::whereIn('slug', [
+                'view-overtimes',
+                'approve-overtime-supervisor',
+            ])->pluck('id');
+            $supervisorRole->permissions()->syncWithoutDetaching($supervisorPermissions);
+            $this->command->info('Assigned supervisor permissions to Supervisor role');
+        }
+
+        // Auto-assign manager approval permissions to Manager role
+        $managerRole = Role::where('name', 'Manager')->first();
+        if ($managerRole) {
+            $managerPermissions = Permission::whereIn('slug', [
+                'view-overtimes',
+                'approve-overtime-manager',
+                'print-overtime-report',
+            ])->pluck('id');
+            $managerRole->permissions()->syncWithoutDetaching($managerPermissions);
+            $this->command->info('Assigned manager permissions to Manager role');
         }
 
         $this->command->info('Created ' . count($permissions) . ' permissions');

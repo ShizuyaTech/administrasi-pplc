@@ -81,11 +81,12 @@
                     @error('shift')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                 </div>
 
+                <div>
+                    <label for="role_id" class="block text-sm font-medium text-gray-700 mb-2">Role Akses</label>
                     <select id="role_id" 
                             name="role_id" 
-                            required 
                             class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 @error('role_id') border-red-500 @enderror">
-                        <option value="">-- Pilih Role --</option>
+                        <option value="">-- Tidak Ada Role --</option>
                         @foreach($roles as $role)
                             <option value="{{ $role->id }}" {{ old('role_id', $employee->role_id) == $role->id ? 'selected' : '' }}>
                                 {{ $role->name }}
@@ -93,7 +94,7 @@
                         @endforeach
                     </select>
                     @error('role_id')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
-                    <p class="mt-1 text-sm text-gray-500">Role menentukan izin akses karyawan dalam sistem</p>
+                    <p class="mt-1 text-sm text-gray-500">Kosongkan jika karyawan tidak memerlukan akses ke sistem</p>
                 </div>
             </div>
 

@@ -65,7 +65,7 @@
             </div>
             <div>
                 <label class="text-sm text-gray-500">Dibuat Pada</label>
-                <p class="font-semibold">{{ $firstOvertime->created_at->format('d M Y H:i') }}</p>
+                <p class="font-semibold">{{ toUserTime($firstOvertime->created_at, 'd M Y H:i') }}</p>
             </div>
             @if($firstOvertime->approver)
             <div>

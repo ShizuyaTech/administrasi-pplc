@@ -1,0 +1,217 @@
+╔══════════════════════════════════════════════════════════════╗
+║  ✅ FIXED: Index Overtime Multi-Section Support             ║
+╚══════════════════════════════════════════════════════════════╝
+
+🎯 PROBLEM:
+   Halaman /overtimes (index) hanya menampilkan overtime dari 
+   1 seksi saja (primary section dari user), padahal supervisor/
+   manager seharusnya melihat semua overtime dari seksi yang 
+   dibawahi.
+
+✅ SOLUTION IMPLEMENTED:
+
+1. CONTROLLER UPDATES (OvertimeController.php):
+   
+   ✅ index() method:
+      - Supervisor/Manager sekarang menggunakan whereIn() dengan 
+        getAccessibleSectionIds()
+      - Menampilkan overtime dari SEMUA seksi yang dimanage
+      - Leader/Foreman tetap hanya lihat section mereka sendiri
+   
+   ✅ export() method:
+      - Export CSV sekarang include semua seksi yang dimanage
+   
+   ✅ batchDetail() method:
+      - Supervisor/Manager bisa view detail batch dari semua seksi 
+        yang dimanage
+   
+   ✅ batchEdit() method:
+      - Supervisor/Manager bisa edit batch dari semua seksi yang 
+        dimanage
+   
+   ✅ batchUpdate() method:
+      - Update logic support multi-section access
+   
+   ✅ batchDelete() method:
+      - Supervisor/Manager bisa delete batch dari semua seksi yang 
+        dimanage
+   
+   ✅ batchApprove() method:
+      - Approval check menggunakan canAccessSection()
+   
+   ✅ batchReject() method:
+      - Rejection check menggunakan canAccessSection()
+
+2. VIEW UPDATES (resources/views/overtimes/index.blade.php):
+   
+   ✅ Added "Dibuat Oleh" column:
+      - Menampilkan nama Leader/Foreman yang create batch
+      - Menampilkan role (Leader/Foreman/etc)
+      - Icon user untuk visual clarity
+   
+   ✅ Improved "Seksi" column:
+      - Sekarang dengan badge/pill styling
+      - Lebih jelas untuk distinguishing different sections
+   
+   ✅ DEBUG INFO box (temporary):
+      - Yellow box di atas halaman (hanya untuk Supervisor/Manager)
+      - Shows: Accessible Section IDs, Managed Sections
+      - Shows: Total batches & sections in current page
+      - Berguna untuk verify data yang tampil
+
+══════════════════════════════════════════════════════════════
+
+📊 EXPECTED BEHAVIOR:
+
+UNTUK ALBERTA (Supervisor):
+   Accessible Sections: Material Control + PPC+Toolroom
+
+   Di halaman /overtimes akan melihat:
+   ✅ Batch dari Ahmad Susanto (Material Control)
+   ✅ Batch dari Eko Wahyudi (PPC + Toolroom)
+   ✅ Total: Semua batch dari kedua seksi
+
+UNTUK PERMANA (Manager):
+   Accessible Sections: Material Control + PPC+Toolroom + 
+                        Logistik + Delivery
+
+   Di halaman /overtimes akan melihat:
+   ✅ Batch dari Material Control
+   ✅ Batch dari PPC + Toolroom
+   ✅ Batch dari Logistik
+   ✅ Batch dari Delivery (jika ada)
+   ✅ Total: Semua batch dari semua 4 seksi
+
+══════════════════════════════════════════════════════════════
+
+🧪 TESTING INSTRUCTIONS:
+
+1. LOGOUT dari aplikasi
+
+2. CLEAR BROWSER CACHE:
+   Ctrl + Shift + Delete → Clear All
+
+3. LOGIN sebagai Alberta:
+   Email: alberta@iuse-ippi.com
+
+4. BUKA halaman Index Overtime:
+   URL: http://localhost/overtimes
+   Menu: "Overtime" → "Data Overtime"
+
+5. VERIFY DEBUG BOX (kotak kuning):
+   Should show:
+   • Accessible Section IDs: [1, 2]
+   • Managed Sections: Material Control, PPC + Toolroom
+   • Total Batches: [sesuai jumlah batch dari 2 seksi]
+   • Sections in Batches: Material Control, PPC + Toolroom
+
+6. VERIFY TABLE:
+   ✅ Lihat kolom "Seksi" → ada Material Control DAN PPC+Toolroom
+   ✅ Lihat kolom "Dibuat Oleh" → ada Ahmad Susanto DAN Eko Wahyudi
+   ✅ Total rows mencakup batch dari KEDUA seksi
+
+7. TEST ACTIONS:
+   ✅ Click "Detail" pada batch Material Control → should work
+   ✅ Click "Detail" pada batch PPC+Toolroom → should work
+   ✅ Click "Edit" pada batch dari any section → should work
+   ✅ Try approve/reject → should work untuk kedua seksi
+
+══════════════════════════════════════════════════════════════
+
+📋 HALAMAN YANG SUDAH SUPPORT MULTI-SECTION:
+
+✅ /overtimes (INDEX) - FIXED!
+✅ /overtimes/approval/supervisor (ALREADY WORKING)
+✅ /overtimes/approval/manager (ALREADY WORKING)
+✅ /overtimes/batch/{id} (DETAIL) - FIXED!
+✅ /overtimes/batch/{id}/edit (EDIT) - FIXED!
+✅ /overtimes-export (EXPORT CSV) - FIXED!
+
+══════════════════════════════════════════════════════════════
+
+🎨 TAMPILAN FORMAT:
+
+Setiap batch ditampilkan sebagai 1 row dalam table:
+
+[Tanggal] [Seksi Badge] [Creator + Role] [Waktu] [Jumlah] [Jam] ...
+
+Contoh:
+25 Mar 2026 | [Material Control] | 👤 Ahmad Susanto   | 17:00-20:00 | 5 orang ...
+                                      Leader
+25 Mar 2026 | [PPC + Toolroom]  | 👤 Eko Wahyudi     | 17:00-20:00 | 3 orang ...
+                                      Foreman
+
+Jika ada 2 batch dari 2 leader berbeda:
+- Ditampilkan sebagai 2 baris terpisah
+- Dengan informasi creator yang berbeda
+- Badge seksi yang berbeda (color coded)
+
+Jika ingin view "grouped by date" atau "collapsed view":
+- Bisa custom lagi viewnya
+- Tapi current implementation sudah menunjukkan semua data
+  dengan jelas
+
+══════════════════════════════════════════════════════════════
+
+🔍 TROUBLESHOOTING:
+
+❓ Masih hanya melihat 1 seksi?
+   1. Check DEBUG BOX - jika show [1, 2] tapi table hanya 1 seksi:
+      → Browser cache issue, hard refresh (Ctrl+Shift+R)
+   
+   2. Check DEBUG BOX - jika show [1] only:
+      → Pivot table issue, run: php check-section-access.php
+      → Fix: php fix-alberta-sections.php
+   
+   3. Check filter tanggal:
+      → Pastikan date range mencakup data yang ada
+      → Coba clear filter (jangan isi tanggal)
+
+❓ Error saat click detail/edit batch dari section lain?
+   → Shouldn't happen dengan update ini
+   → canAccessSection() sudah check pivot table
+   → If error, screenshot & share error message
+
+══════════════════════════════════════════════════════════════
+
+✅ SUMMARY:
+
+SEBELUM FIX:
+   /overtimes → Material Control only (6 batches)
+   /overtimes/approval/supervisor → Both sections (SUDAH OK)
+
+SETELAH FIX:
+   /overtimes → Material Control + PPC+Toolroom (all batches)
+   /overtimes/approval/supervisor → Both sections (TETAP OK)
+
+ALL PAGES sekarang CONSISTENT menampilkan data dari semua
+seksi yang dimanage oleh Supervisor/Manager!
+
+══════════════════════════════════════════════════════════════
+
+📁 FILES MODIFIED:
+
+1. app/Http/Controllers/OvertimeController.php
+   - index() → multi-section query
+   - export() → multi-section export
+   - batchDetail() → section access check
+   - batchEdit() → section access check
+   - batchUpdate() → section access check
+   - batchDelete() → section access check
+   Total: 8 methods updated
+
+2. resources/views/overtimes/index.blade.php
+   - Added DEBUG info box
+   - Added "Dibuat Oleh" column
+   - Enhanced "Seksi" column styling
+   Total: 3 UI improvements
+
+══════════════════════════════════════════════════════════════
+
+🚀 READY TO TEST!
+
+Silakan logout, clear cache, login ulang sebagai Alberta,
+dan verify bahwa halaman /overtimes sekarang menampilkan
+batch dari Material Control DAN PPC+Toolroom!
+
+══════════════════════════════════════════════════════════════

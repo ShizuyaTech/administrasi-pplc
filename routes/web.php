@@ -15,6 +15,8 @@ use App\Http\Controllers\BreakTimeController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\PermissionController;
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\SectionController;
 
 // Redirect root to dashboard or login
 Route::get('/', function () {
@@ -47,18 +49,51 @@ Route::middleware('auth')->group(function () {
     Route::get('overtimes', [OvertimeController::class, 'index'])->name('overtimes.index');
     Route::get('overtimes/create', [OvertimeController::class, 'create'])->name('overtimes.create');
     Route::post('overtimes', [OvertimeController::class, 'store'])->name('overtimes.store');
+    
+    // Bulk Actions for consolidated date view
+    Route::post('overtimes/bulk-action', [OvertimeController::class, 'bulkAction'])->name('overtimes.bulk-action');
+    Route::delete('overtimes/bulk-delete', [OvertimeController::class, 'bulkDelete'])->name('overtimes.bulk-delete');
+    
+    // Overtime 2-Stage Approval System — Supervisor
+    Route::middleware('permission:approve-overtime-supervisor')->group(function () {
+        Route::get('overtimes/approval/supervisor', [OvertimeController::class, 'supervisorApprovalIndex'])->name('overtimes.approval.supervisor');
+        Route::post('overtimes/supervisor-bulk-approve', [OvertimeController::class, 'supervisorBulkApprove'])->name('overtimes.supervisor.bulk-approve');
+        Route::post('overtimes/supervisor-bulk-reject', [OvertimeController::class, 'supervisorBulkReject'])->name('overtimes.supervisor.bulk-reject');
+        Route::put('overtimes/{overtime}/update-individual', [OvertimeController::class, 'updateIndividual'])->name('overtimes.update-individual');
+    });
+    
+    // Overtime 2-Stage Approval System — Manager
+    Route::middleware('permission:approve-overtime-manager')->group(function () {
+        Route::get('overtimes/approval/manager', [OvertimeController::class, 'managerApprovalIndex'])->name('overtimes.approval.manager');
+        Route::post('overtimes/manager-bulk-approve', [OvertimeController::class, 'managerBulkApprove'])->name('overtimes.manager.bulk-approve');
+        Route::post('overtimes/manager-bulk-reject', [OvertimeController::class, 'managerBulkReject'])->name('overtimes.manager.bulk-reject');
+    });
+    
+    // Overtime PDF Report
+    Route::middleware('permission:print-overtime-report')->group(function () {
+        Route::get('overtimes/pdf', [OvertimeController::class, 'showGeneratePDFForm'])->name('overtimes.pdf');
+        Route::get('overtimes/pdf/generate', [OvertimeController::class, 'generatePDF'])->name('overtimes.pdf.generate');
+    });
+    
+    // Profile / Signature Management
+    Route::get('profile/signature', [ProfileController::class, 'signature'])->name('profile.signature');
+    Route::post('profile/signature', [ProfileController::class, 'uploadSignature'])->name('profile.signature.upload');
+    Route::delete('profile/signature', [ProfileController::class, 'deleteSignature'])->name('profile.signature.delete');
+    Route::get('profile/password', [ProfileController::class, 'changePassword'])->name('profile.password');
+    Route::put('profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password.update');
+    
     Route::get('overtimes/batch/{batchId}', [OvertimeController::class, 'batchDetail'])->name('overtimes.batch.detail');
     Route::get('overtimes/batch/{batchId}/edit', [OvertimeController::class, 'batchEdit'])->name('overtimes.batch.edit');
     Route::put('overtimes/batch/{batchId}', [OvertimeController::class, 'batchUpdate'])->name('overtimes.batch.update');
-    Route::post('overtimes/batch/{batchId}/approve', [OvertimeController::class, 'batchApprove'])->name('overtimes.batch.approve');
-    Route::post('overtimes/batch/{batchId}/reject', [OvertimeController::class, 'batchReject'])->name('overtimes.batch.reject');
+    Route::post('overtimes/batch/{batchId}/approve', [OvertimeController::class, 'batchApprove'])->name('overtimes.batch.approve')->middleware('permission:approve-overtime-supervisor,approve-overtime-manager');
+    Route::post('overtimes/batch/{batchId}/reject', [OvertimeController::class, 'batchReject'])->name('overtimes.batch.reject')->middleware('permission:approve-overtime-supervisor,approve-overtime-manager');
     Route::delete('overtimes/batch/{batchId}', [OvertimeController::class, 'batchDelete'])->name('overtimes.batch.delete');
     Route::get('overtimes/{overtime}', [OvertimeController::class, 'show'])->name('overtimes.show')->middleware('section.access:overtime');
     Route::get('overtimes/{overtime}/edit', [OvertimeController::class, 'edit'])->name('overtimes.edit')->middleware('section.access:overtime');
     Route::put('overtimes/{overtime}', [OvertimeController::class, 'update'])->name('overtimes.update')->middleware('section.access:overtime');
     Route::delete('overtimes/{overtime}', [OvertimeController::class, 'destroy'])->name('overtimes.destroy')->middleware('section.access:overtime');
-    Route::post('overtimes/{overtime}/approve', [OvertimeController::class, 'approve'])->name('overtimes.approve');
-    Route::post('overtimes/{overtime}/reject', [OvertimeController::class, 'reject'])->name('overtimes.reject');
+    Route::post('overtimes/{overtime}/approve', [OvertimeController::class, 'approve'])->name('overtimes.approve')->middleware('permission:approve-overtime-supervisor,approve-overtime-manager');
+    Route::post('overtimes/{overtime}/reject', [OvertimeController::class, 'reject'])->name('overtimes.reject')->middleware('permission:approve-overtime-supervisor,approve-overtime-manager');
     Route::get('overtimes-export', [OvertimeController::class, 'export'])->name('overtimes.export');
     
     // Business Trips
@@ -103,49 +138,106 @@ Route::middleware('auth')->group(function () {
     Route::get('stock-movements-export', [StockMovementController::class, 'export'])->name('stock-movements.export');
     
     // Employees (Master Data)
-    Route::get('employees/search', [EmployeeController::class, 'search'])->name('employees.search');
-    Route::get('employees', [EmployeeController::class, 'index'])->name('employees.index');
-    Route::get('employees/create', [EmployeeController::class, 'create'])->name('employees.create');
-    Route::post('employees', [EmployeeController::class, 'store'])->name('employees.store');
-    Route::get('employees/{employee}', [EmployeeController::class, 'show'])->name('employees.show');
-    Route::get('employees/{employee}/edit', [EmployeeController::class, 'edit'])->name('employees.edit');
-    Route::put('employees/{employee}', [EmployeeController::class, 'update'])->name('employees.update');
-    Route::delete('employees/{employee}', [EmployeeController::class, 'destroy'])->name('employees.destroy');
+    Route::middleware('permission:view-employees')->group(function () {
+        Route::get('employees/search', [EmployeeController::class, 'search'])->name('employees.search');
+        Route::get('employees', [EmployeeController::class, 'index'])->name('employees.index');
+        Route::get('employees/{employee}', [EmployeeController::class, 'show'])->name('employees.show');
+    });
+    Route::middleware('permission:create-employee')->group(function () {
+        Route::get('employees/create', [EmployeeController::class, 'create'])->name('employees.create');
+        Route::post('employees', [EmployeeController::class, 'store'])->name('employees.store');
+    });
+    Route::middleware('permission:edit-employee')->group(function () {
+        Route::get('employees/{employee}/edit', [EmployeeController::class, 'edit'])->name('employees.edit');
+        Route::put('employees/{employee}', [EmployeeController::class, 'update'])->name('employees.update');
+    });
+    Route::delete('employees/{employee}', [EmployeeController::class, 'destroy'])->name('employees.destroy')
+        ->middleware('permission:delete-employee');
     
     // Break Times (Jam Istirahat - Master Data)
-    Route::get('break-times', [BreakTimeController::class, 'index'])->name('break-times.index');
-    Route::get('break-times/create', [BreakTimeController::class, 'create'])->name('break-times.create');
-    Route::post('break-times', [BreakTimeController::class, 'store'])->name('break-times.store');
-    Route::get('break-times/{breakTime}/edit', [BreakTimeController::class, 'edit'])->name('break-times.edit');
-    Route::put('break-times/{breakTime}', [BreakTimeController::class, 'update'])->name('break-times.update');
-    Route::delete('break-times/{breakTime}', [BreakTimeController::class, 'destroy'])->name('break-times.destroy');
+    Route::middleware('permission:view-break-times')->group(function () {
+        Route::get('break-times', [BreakTimeController::class, 'index'])->name('break-times.index');
+    });
+    Route::middleware('permission:create-break-time')->group(function () {
+        Route::get('break-times/create', [BreakTimeController::class, 'create'])->name('break-times.create');
+        Route::post('break-times', [BreakTimeController::class, 'store'])->name('break-times.store');
+    });
+    Route::middleware('permission:edit-break-time')->group(function () {
+        Route::get('break-times/{breakTime}/edit', [BreakTimeController::class, 'edit'])->name('break-times.edit');
+        Route::put('break-times/{breakTime}', [BreakTimeController::class, 'update'])->name('break-times.update');
+    });
+    Route::delete('break-times/{breakTime}', [BreakTimeController::class, 'destroy'])->name('break-times.destroy')
+        ->middleware('permission:delete-break-time');
     
     // Users Management (Super Admin Only)
-    Route::get('users', [UserController::class, 'index'])->name('users.index');
-    Route::get('users/create', [UserController::class, 'create'])->name('users.create');
-    Route::post('users', [UserController::class, 'store'])->name('users.store');
-    Route::get('users/{user}', [UserController::class, 'show'])->name('users.show');
-    Route::get('users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
-    Route::put('users/{user}', [UserController::class, 'update'])->name('users.update');
-    Route::delete('users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
+    Route::middleware('permission:view-users')->group(function () {
+        Route::get('users', [UserController::class, 'index'])->name('users.index');
+        Route::get('users/{user}', [UserController::class, 'show'])->name('users.show');
+    });
+    Route::middleware('permission:create-user')->group(function () {
+        Route::get('users/create', [UserController::class, 'create'])->name('users.create');
+        Route::post('users', [UserController::class, 'store'])->name('users.store');
+    });
+    Route::middleware('permission:edit-user')->group(function () {
+        Route::get('users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
+        Route::put('users/{user}', [UserController::class, 'update'])->name('users.update');
+    });
+    Route::delete('users/{user}', [UserController::class, 'destroy'])->name('users.destroy')
+        ->middleware('permission:delete-user');
     
     // Roles Management (Super Admin Only)
-    Route::get('roles', [RoleController::class, 'index'])->name('roles.index');
-    Route::get('roles/create', [RoleController::class, 'create'])->name('roles.create');
-    Route::post('roles', [RoleController::class, 'store'])->name('roles.store');
-    Route::get('roles/{role}', [RoleController::class, 'show'])->name('roles.show');
-    Route::get('roles/{role}/edit', [RoleController::class, 'edit'])->name('roles.edit');
-    Route::put('roles/{role}', [RoleController::class, 'update'])->name('roles.update');
-    Route::delete('roles/{role}', [RoleController::class, 'destroy'])->name('roles.destroy');
-    Route::get('roles/{role}/permissions', [RoleController::class, 'permissions'])->name('roles.permissions');
-    Route::put('roles/{role}/permissions', [RoleController::class, 'updatePermissions'])->name('roles.permissions.update');
+    Route::middleware('permission:view-roles')->group(function () {
+        Route::get('roles', [RoleController::class, 'index'])->name('roles.index');
+        Route::get('roles/{role}', [RoleController::class, 'show'])->name('roles.show');
+    });
+    Route::middleware('permission:create-role')->group(function () {
+        Route::get('roles/create', [RoleController::class, 'create'])->name('roles.create');
+        Route::post('roles', [RoleController::class, 'store'])->name('roles.store');
+    });
+    Route::middleware('permission:edit-role')->group(function () {
+        Route::get('roles/{role}/edit', [RoleController::class, 'edit'])->name('roles.edit');
+        Route::put('roles/{role}', [RoleController::class, 'update'])->name('roles.update');
+    });
+    Route::delete('roles/{role}', [RoleController::class, 'destroy'])->name('roles.destroy')
+        ->middleware('permission:delete-role');
+    Route::middleware('permission:manage-role-permissions')->group(function () {
+        Route::get('roles/{role}/permissions', [RoleController::class, 'permissions'])->name('roles.permissions');
+        Route::put('roles/{role}/permissions', [RoleController::class, 'updatePermissions'])->name('roles.permissions.update');
+    });
     
     // Permissions Management (Super Admin Only)
-    Route::get('permissions', [PermissionController::class, 'index'])->name('permissions.index');
-    Route::get('permissions/create', [PermissionController::class, 'create'])->name('permissions.create');
-    Route::post('permissions', [PermissionController::class, 'store'])->name('permissions.store');
-    Route::get('permissions/{permission}', [PermissionController::class, 'show'])->name('permissions.show');
-    Route::get('permissions/{permission}/edit', [PermissionController::class, 'edit'])->name('permissions.edit');
-    Route::put('permissions/{permission}', [PermissionController::class, 'update'])->name('permissions.update');
-    Route::delete('permissions/{permission}', [PermissionController::class, 'destroy'])->name('permissions.destroy');
+    Route::middleware('permission:view-permissions')->group(function () {
+        Route::get('permissions', [PermissionController::class, 'index'])->name('permissions.index');
+        Route::get('permissions/{permission}', [PermissionController::class, 'show'])->name('permissions.show');
+    });
+    Route::middleware('permission:create-permission')->group(function () {
+        Route::get('permissions/create', [PermissionController::class, 'create'])->name('permissions.create');
+        Route::post('permissions', [PermissionController::class, 'store'])->name('permissions.store');
+    });
+    Route::middleware('permission:edit-permission')->group(function () {
+        Route::get('permissions/{permission}/edit', [PermissionController::class, 'edit'])->name('permissions.edit');
+        Route::put('permissions/{permission}', [PermissionController::class, 'update'])->name('permissions.update');
+    });
+    Route::delete('permissions/{permission}', [PermissionController::class, 'destroy'])->name('permissions.destroy')
+        ->middleware('permission:delete-permission');
+    
+    // Sections Management (Super Admin Only)
+    Route::middleware('permission:view-users')->group(function () {
+        Route::get('sections', [SectionController::class, 'index'])->name('sections.index');
+        Route::get('sections/assignments/manage', [SectionController::class, 'assignments'])->name('sections.assignments');
+        Route::get('sections/assign/{user}', [SectionController::class, 'assignForm'])->name('sections.assign.form');
+    });
+    Route::middleware('permission:create-user')->group(function () {
+        Route::get('sections/create', [SectionController::class, 'create'])->name('sections.create');
+        Route::post('sections', [SectionController::class, 'store'])->name('sections.store');
+        Route::post('sections/assign/{user}', [SectionController::class, 'assignSections'])->name('sections.assign');
+    });
+    Route::middleware('permission:edit-user')->group(function () {
+        Route::get('sections/{section}/edit', [SectionController::class, 'edit'])->name('sections.edit');
+        Route::put('sections/{section}', [SectionController::class, 'update'])->name('sections.update');
+    });
+    Route::delete('sections/{section}', [SectionController::class, 'destroy'])->name('sections.destroy')
+        ->middleware('permission:delete-user');
+    Route::delete('sections/assignments/{user}/{section}', [SectionController::class, 'removeAssignment'])->name('sections.assignments.remove')
+        ->middleware('permission:edit-user');
 });

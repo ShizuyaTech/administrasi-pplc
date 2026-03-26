@@ -15,6 +15,8 @@ class RoleSeeder extends Seeder
     {
         $roles = [
             ['name' => 'Super Admin', 'description' => 'Full access to all sections and features'],
+            ['name' => 'Supervisor', 'description' => 'Can approve overtimes at supervisor stage'],
+            ['name' => 'Manager', 'description' => 'Can approve overtimes at manager stage'],
             ['name' => 'Group Leader', 'description' => 'Access to their assigned section only'],
             ['name' => 'Foreman', 'description' => 'Access to their assigned section only'],
             ['name' => 'Staff', 'description' => 'Access to their assigned section only'],
