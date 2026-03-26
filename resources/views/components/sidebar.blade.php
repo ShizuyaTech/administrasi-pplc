@@ -143,8 +143,8 @@
             @endif
             @endif
 
-            <!-- E-Signature (for Supervisor/Manager) -->
-            @if(auth()->user()->isSupervisor() || auth()->user()->isManager() || auth()->user()->canManageAllSections())
+            <!-- E-Signature (only for users with upload-signature permission) -->
+            @if(auth()->user()->hasPermission('upload-signature'))
             <div class="pt-4 mt-4 border-t border-gray-200">
                 <a href="{{ route('profile.signature') }}" 
                    class="flex items-center space-x-3 px-4 py-3 text-gray-700 rounded-lg hover:bg-indigo-50 hover:text-indigo-600 transition {{ request()->routeIs('profile.signature') ? 'bg-indigo-50 text-indigo-600' : '' }}">

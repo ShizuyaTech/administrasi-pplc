@@ -75,10 +75,10 @@ Route::middleware('auth')->group(function () {
         Route::get('overtimes/pdf/generate', [OvertimeController::class, 'generatePDF'])->name('overtimes.pdf.generate');
     });
     
-    // Profile / Signature Management
-    Route::get('profile/signature', [ProfileController::class, 'signature'])->name('profile.signature');
-    Route::post('profile/signature', [ProfileController::class, 'uploadSignature'])->name('profile.signature.upload');
-    Route::delete('profile/signature', [ProfileController::class, 'deleteSignature'])->name('profile.signature.delete');
+    // Profile / Signature Management (only users with upload-signature permission)
+    Route::get('profile/signature', [ProfileController::class, 'signature'])->name('profile.signature')->middleware('permission:upload-signature');
+    Route::post('profile/signature', [ProfileController::class, 'uploadSignature'])->name('profile.signature.upload')->middleware('permission:upload-signature');
+    Route::delete('profile/signature', [ProfileController::class, 'deleteSignature'])->name('profile.signature.delete')->middleware('permission:upload-signature');
     Route::get('profile/password', [ProfileController::class, 'changePassword'])->name('profile.password');
     Route::put('profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password.update');
     
