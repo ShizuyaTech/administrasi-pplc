@@ -137,22 +137,15 @@ Route::middleware('auth')->group(function () {
     Route::get('stock-movements/{stockMovement}', [StockMovementController::class, 'show'])->name('stock-movements.show');
     Route::get('stock-movements-export', [StockMovementController::class, 'export'])->name('stock-movements.export');
     
-    // Employees (Master Data)
-    Route::middleware('permission:view-employees')->group(function () {
-        Route::get('employees/search', [EmployeeController::class, 'search'])->name('employees.search');
-        Route::get('employees', [EmployeeController::class, 'index'])->name('employees.index');
-        Route::get('employees/{employee}', [EmployeeController::class, 'show'])->name('employees.show');
-    });
-    Route::middleware('permission:create-employee')->group(function () {
-        Route::get('employees/create', [EmployeeController::class, 'create'])->name('employees.create');
-        Route::post('employees', [EmployeeController::class, 'store'])->name('employees.store');
-    });
-    Route::middleware('permission:edit-employee')->group(function () {
-        Route::get('employees/{employee}/edit', [EmployeeController::class, 'edit'])->name('employees.edit');
-        Route::put('employees/{employee}', [EmployeeController::class, 'update'])->name('employees.update');
-    });
-    Route::delete('employees/{employee}', [EmployeeController::class, 'destroy'])->name('employees.destroy')
-        ->middleware('permission:delete-employee');
+    // Employees (Master Data) — static routes MUST come before wildcard routes
+    Route::get('employees/search', [EmployeeController::class, 'search'])->name('employees.search')->middleware('permission:view-employees');
+    Route::get('employees', [EmployeeController::class, 'index'])->name('employees.index')->middleware('permission:view-employees');
+    Route::get('employees/create', [EmployeeController::class, 'create'])->name('employees.create')->middleware('permission:create-employee');
+    Route::post('employees', [EmployeeController::class, 'store'])->name('employees.store')->middleware('permission:create-employee');
+    Route::get('employees/{employee}', [EmployeeController::class, 'show'])->name('employees.show')->middleware('permission:view-employees');
+    Route::get('employees/{employee}/edit', [EmployeeController::class, 'edit'])->name('employees.edit')->middleware('permission:edit-employee');
+    Route::put('employees/{employee}', [EmployeeController::class, 'update'])->name('employees.update')->middleware('permission:edit-employee');
+    Route::delete('employees/{employee}', [EmployeeController::class, 'destroy'])->name('employees.destroy')->middleware('permission:delete-employee');
     
     // Break Times (Jam Istirahat - Master Data)
     Route::middleware('permission:view-break-times')->group(function () {
@@ -169,75 +162,44 @@ Route::middleware('auth')->group(function () {
     Route::delete('break-times/{breakTime}', [BreakTimeController::class, 'destroy'])->name('break-times.destroy')
         ->middleware('permission:delete-break-time');
     
-    // Users Management (Super Admin Only)
-    Route::middleware('permission:view-users')->group(function () {
-        Route::get('users', [UserController::class, 'index'])->name('users.index');
-        Route::get('users/{user}', [UserController::class, 'show'])->name('users.show');
-    });
-    Route::middleware('permission:create-user')->group(function () {
-        Route::get('users/create', [UserController::class, 'create'])->name('users.create');
-        Route::post('users', [UserController::class, 'store'])->name('users.store');
-    });
-    Route::middleware('permission:edit-user')->group(function () {
-        Route::get('users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
-        Route::put('users/{user}', [UserController::class, 'update'])->name('users.update');
-    });
-    Route::delete('users/{user}', [UserController::class, 'destroy'])->name('users.destroy')
-        ->middleware('permission:delete-user');
+    // Users Management (Super Admin Only) — static routes MUST come before wildcard routes
+    Route::get('users', [UserController::class, 'index'])->name('users.index')->middleware('permission:view-users');
+    Route::get('users/create', [UserController::class, 'create'])->name('users.create')->middleware('permission:create-user');
+    Route::post('users', [UserController::class, 'store'])->name('users.store')->middleware('permission:create-user');
+    Route::get('users/{user}', [UserController::class, 'show'])->name('users.show')->middleware('permission:view-users');
+    Route::get('users/{user}/edit', [UserController::class, 'edit'])->name('users.edit')->middleware('permission:edit-user');
+    Route::put('users/{user}', [UserController::class, 'update'])->name('users.update')->middleware('permission:edit-user');
+    Route::delete('users/{user}', [UserController::class, 'destroy'])->name('users.destroy')->middleware('permission:delete-user');
     
-    // Roles Management (Super Admin Only)
-    Route::middleware('permission:view-roles')->group(function () {
-        Route::get('roles', [RoleController::class, 'index'])->name('roles.index');
-        Route::get('roles/{role}', [RoleController::class, 'show'])->name('roles.show');
-    });
-    Route::middleware('permission:create-role')->group(function () {
-        Route::get('roles/create', [RoleController::class, 'create'])->name('roles.create');
-        Route::post('roles', [RoleController::class, 'store'])->name('roles.store');
-    });
-    Route::middleware('permission:edit-role')->group(function () {
-        Route::get('roles/{role}/edit', [RoleController::class, 'edit'])->name('roles.edit');
-        Route::put('roles/{role}', [RoleController::class, 'update'])->name('roles.update');
-    });
-    Route::delete('roles/{role}', [RoleController::class, 'destroy'])->name('roles.destroy')
-        ->middleware('permission:delete-role');
-    Route::middleware('permission:manage-role-permissions')->group(function () {
-        Route::get('roles/{role}/permissions', [RoleController::class, 'permissions'])->name('roles.permissions');
-        Route::put('roles/{role}/permissions', [RoleController::class, 'updatePermissions'])->name('roles.permissions.update');
-    });
+    // Roles Management (Super Admin Only) — static routes MUST come before wildcard routes
+    Route::get('roles', [RoleController::class, 'index'])->name('roles.index')->middleware('permission:view-roles');
+    Route::get('roles/create', [RoleController::class, 'create'])->name('roles.create')->middleware('permission:create-role');
+    Route::post('roles', [RoleController::class, 'store'])->name('roles.store')->middleware('permission:create-role');
+    Route::get('roles/{role}', [RoleController::class, 'show'])->name('roles.show')->middleware('permission:view-roles');
+    Route::get('roles/{role}/edit', [RoleController::class, 'edit'])->name('roles.edit')->middleware('permission:edit-role');
+    Route::put('roles/{role}', [RoleController::class, 'update'])->name('roles.update')->middleware('permission:edit-role');
+    Route::delete('roles/{role}', [RoleController::class, 'destroy'])->name('roles.destroy')->middleware('permission:delete-role');
+    Route::get('roles/{role}/permissions', [RoleController::class, 'permissions'])->name('roles.permissions')->middleware('permission:manage-role-permissions');
+    Route::put('roles/{role}/permissions', [RoleController::class, 'updatePermissions'])->name('roles.permissions.update')->middleware('permission:manage-role-permissions');
     
-    // Permissions Management (Super Admin Only)
-    Route::middleware('permission:view-permissions')->group(function () {
-        Route::get('permissions', [PermissionController::class, 'index'])->name('permissions.index');
-        Route::get('permissions/{permission}', [PermissionController::class, 'show'])->name('permissions.show');
-    });
-    Route::middleware('permission:create-permission')->group(function () {
-        Route::get('permissions/create', [PermissionController::class, 'create'])->name('permissions.create');
-        Route::post('permissions', [PermissionController::class, 'store'])->name('permissions.store');
-    });
-    Route::middleware('permission:edit-permission')->group(function () {
-        Route::get('permissions/{permission}/edit', [PermissionController::class, 'edit'])->name('permissions.edit');
-        Route::put('permissions/{permission}', [PermissionController::class, 'update'])->name('permissions.update');
-    });
-    Route::delete('permissions/{permission}', [PermissionController::class, 'destroy'])->name('permissions.destroy')
-        ->middleware('permission:delete-permission');
+    // Permissions Management (Super Admin Only) — static routes MUST come before wildcard routes
+    Route::get('permissions', [PermissionController::class, 'index'])->name('permissions.index')->middleware('permission:view-permissions');
+    Route::get('permissions/create', [PermissionController::class, 'create'])->name('permissions.create')->middleware('permission:create-permission');
+    Route::post('permissions', [PermissionController::class, 'store'])->name('permissions.store')->middleware('permission:create-permission');
+    Route::get('permissions/{permission}', [PermissionController::class, 'show'])->name('permissions.show')->middleware('permission:view-permissions');
+    Route::get('permissions/{permission}/edit', [PermissionController::class, 'edit'])->name('permissions.edit')->middleware('permission:edit-permission');
+    Route::put('permissions/{permission}', [PermissionController::class, 'update'])->name('permissions.update')->middleware('permission:edit-permission');
+    Route::delete('permissions/{permission}', [PermissionController::class, 'destroy'])->name('permissions.destroy')->middleware('permission:delete-permission');
     
-    // Sections Management (Super Admin Only)
-    Route::middleware('permission:view-users')->group(function () {
-        Route::get('sections', [SectionController::class, 'index'])->name('sections.index');
-        Route::get('sections/assignments/manage', [SectionController::class, 'assignments'])->name('sections.assignments');
-        Route::get('sections/assign/{user}', [SectionController::class, 'assignForm'])->name('sections.assign.form');
-    });
-    Route::middleware('permission:create-user')->group(function () {
-        Route::get('sections/create', [SectionController::class, 'create'])->name('sections.create');
-        Route::post('sections', [SectionController::class, 'store'])->name('sections.store');
-        Route::post('sections/assign/{user}', [SectionController::class, 'assignSections'])->name('sections.assign');
-    });
-    Route::middleware('permission:edit-user')->group(function () {
-        Route::get('sections/{section}/edit', [SectionController::class, 'edit'])->name('sections.edit');
-        Route::put('sections/{section}', [SectionController::class, 'update'])->name('sections.update');
-    });
-    Route::delete('sections/{section}', [SectionController::class, 'destroy'])->name('sections.destroy')
-        ->middleware('permission:delete-user');
-    Route::delete('sections/assignments/{user}/{section}', [SectionController::class, 'removeAssignment'])->name('sections.assignments.remove')
-        ->middleware('permission:edit-user');
+    // Sections Management (Super Admin Only) — static routes MUST come before wildcard routes
+    Route::get('sections', [SectionController::class, 'index'])->name('sections.index')->middleware('permission:view-users');
+    Route::get('sections/assignments/manage', [SectionController::class, 'assignments'])->name('sections.assignments')->middleware('permission:view-users');
+    Route::get('sections/create', [SectionController::class, 'create'])->name('sections.create')->middleware('permission:create-user');
+    Route::post('sections', [SectionController::class, 'store'])->name('sections.store')->middleware('permission:create-user');
+    Route::get('sections/assign/{user}', [SectionController::class, 'assignForm'])->name('sections.assign.form')->middleware('permission:view-users');
+    Route::post('sections/assign/{user}', [SectionController::class, 'assignSections'])->name('sections.assign')->middleware('permission:create-user');
+    Route::get('sections/{section}/edit', [SectionController::class, 'edit'])->name('sections.edit')->middleware('permission:edit-user');
+    Route::put('sections/{section}', [SectionController::class, 'update'])->name('sections.update')->middleware('permission:edit-user');
+    Route::delete('sections/{section}', [SectionController::class, 'destroy'])->name('sections.destroy')->middleware('permission:delete-user');
+    Route::delete('sections/assignments/{user}/{section}', [SectionController::class, 'removeAssignment'])->name('sections.assignments.remove')->middleware('permission:edit-user');
 });
