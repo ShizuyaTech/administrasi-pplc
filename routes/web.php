@@ -138,7 +138,7 @@ Route::middleware('auth')->group(function () {
     Route::get('stock-movements-export', [StockMovementController::class, 'export'])->name('stock-movements.export');
     
     // Employees (Master Data) — static routes MUST come before wildcard routes
-    Route::get('employees/search', [EmployeeController::class, 'search'])->name('employees.search')->middleware('permission:view-employees');
+    Route::get('employees/search', [EmployeeController::class, 'search'])->name('employees.search')->middleware('permission:view-employees,create-overtime,create-absence,create-business-trip');
     Route::get('employees', [EmployeeController::class, 'index'])->name('employees.index')->middleware('permission:view-employees');
     Route::get('employees/create', [EmployeeController::class, 'create'])->name('employees.create')->middleware('permission:create-employee');
     Route::post('employees', [EmployeeController::class, 'store'])->name('employees.store')->middleware('permission:create-employee');
