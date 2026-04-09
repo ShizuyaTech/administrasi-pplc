@@ -5,6 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\Card;
 use App\Models\Section;
 use Illuminate\Http\Request;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class CardController extends Controller
 {
@@ -194,5 +197,121 @@ class CardController extends Controller
             ->get(['id', 'card_number', 'card_type', 'current_balance']);
         
         return response()->json($cards);
+    }
+
+    public function importForm()
+    {
+        $user = auth()->user();
+        $sections = $user->canManageAllSections() ? Section::orderBy('name')->get() : collect([$user->section]);
+        return view('cards.import', compact('sections'));
+    }
+
+    public function import(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:xlsx,xls|max:5120',
+        ]);
+
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
+        $sections = Section::pluck('id', 'name')->mapWithKeys(fn($id, $name) => [strtolower($name) => $id]);
+
+        try {
+            $spreadsheet = IOFactory::load($request->file('file')->getPathname());
+            $sheet = $spreadsheet->getActiveSheet();
+            $rows  = $sheet->toArray(null, true, true, true);
+        } catch (\Exception $e) {
+            return back()->withErrors(['file' => 'File tidak dapat dibaca: ' . $e->getMessage()]);
+        }
+
+        $imported = 0;
+        $skipped  = [];
+        $validTypes    = ['flazz', 'brizzi', 'e-toll', 'other'];
+        $validStatuses = ['active', 'inactive'];
+
+        foreach ($rows as $i => $row) {
+            if ($i === 1) continue;
+
+            $cardNumber = trim($row['A'] ?? '');
+            $cardType   = strtolower(trim($row['B'] ?? 'other'));
+            $balance    = $row['C'] ?? 0;
+            $status     = strtolower(trim($row['D'] ?? 'active'));
+            $sectionN   = strtolower(trim($row['E'] ?? ''));
+            $notes      = trim($row['F'] ?? '');
+
+            if ($cardNumber === '') continue;
+
+            if (!in_array($cardType, $validTypes)) {
+                $skipped[] = "Baris $i ($cardNumber): Jenis kartu '$cardType' tidak valid";
+                continue;
+            }
+
+            if (!in_array($status, $validStatuses)) {
+                $skipped[] = "Baris $i ($cardNumber): Status '$status' tidak valid";
+                continue;
+            }
+
+            if ($user->canManageAllSections()) {
+                $sectionId = $sections[$sectionN] ?? null;
+                if (!$sectionId) {
+                    $skipped[] = "Baris $i ($cardNumber): Seksi '$sectionN' tidak ditemukan";
+                    continue;
+                }
+            } else {
+                $sectionId = $user->section_id;
+            }
+
+            if (Card::where('card_number', $cardNumber)->exists()) {
+                $skipped[] = "Baris $i: Nomor kartu $cardNumber sudah ada";
+                continue;
+            }
+
+            Card::create([
+                'card_number'     => $cardNumber,
+                'card_type'       => $cardType,
+                'current_balance' => (float) $balance,
+                'status'          => $status,
+                'section_id'      => $sectionId,
+                'notes'           => $notes ?: null,
+            ]);
+            $imported++;
+        }
+
+        $message = "Berhasil import $imported kartu e-money.";
+        if ($skipped) {
+            $message .= ' Dilewati: ' . implode('; ', $skipped);
+        }
+
+        return redirect()->route('cards.index')->with('success', $message);
+    }
+
+    public function downloadTemplate()
+    {
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Kartu E-Money');
+
+        $headers = ['Nomor Kartu', 'Jenis Kartu (flazz/brizzi/e-toll/other)', 'Saldo Awal', 'Status (active/inactive)', 'Seksi', 'Catatan'];
+        $sheet->fromArray($headers, null, 'A1');
+        foreach (range('A', 'F') as $col) {
+            $sheet->getColumnDimension($col)->setWidth(30);
+        }
+
+        $sample = ['1234567890', 'flazz', 500000, 'active', 'Seksi IT', 'Kartu operasional'];
+        $sheet->fromArray($sample, null, 'A2');
+
+        $headerStyle = [
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+            'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => '4F46E5']],
+        ];
+        $sheet->getStyle('A1:F1')->applyFromArray($headerStyle);
+
+        $writer = new Xlsx($spreadsheet);
+
+        return response()->streamDownload(function () use ($writer) {
+            $writer->save('php://output');
+        }, 'template_import_kartu_emoney.xlsx', [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
     }
 }

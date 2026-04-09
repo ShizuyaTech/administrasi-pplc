@@ -7,6 +7,10 @@ use App\Models\Section;
 use App\Http\Requests\StoreOvertimeRequest;
 use App\Http\Requests\UpdateOvertimeRequest;
 use Illuminate\Http\Request;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
 
 class OvertimeController extends Controller
 {
@@ -352,7 +356,7 @@ class OvertimeController extends Controller
     }
     
     /**
-     * Export overtimes to CSV
+     * Export overtimes to Excel
      */
     public function export(Request $request)
     {
@@ -360,7 +364,6 @@ class OvertimeController extends Controller
         $query = Overtime::with(['section', 'creator', 'approver']);
         
         if (!$user->canManageAllSections()) {
-            // Supervisor/Manager can export from all sections they manage
             if ($user->isSupervisor() || $user->isManager()) {
                 $accessibleSectionIds = $user->getAccessibleSectionIds();
                 $query->whereIn('section_id', $accessibleSectionIds);
@@ -386,44 +389,51 @@ class OvertimeController extends Controller
         }
         
         $overtimes = $query->orderBy('date', 'desc')->get();
-        
-        $filename = 'overtime_' . date('Ymd_His') . '.csv';
-        $headers = [
-            'Content-Type' => 'text/csv',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Overtime');
+
+        $headers = ['Tanggal', 'Seksi', 'Nama Pegawai', 'Jam Mulai', 'Jam Selesai', 'Total Jam', 'Tipe', 'Deskripsi', 'Status', 'Disetujui Oleh', 'Dibuat Oleh', 'Dibuat Pada'];
+        $sheet->fromArray($headers, null, 'A1');
+
+        $row = 2;
+        foreach ($overtimes as $overtime) {
+            $sheet->fromArray([
+                $overtime->date->format('d/m/Y'),
+                $overtime->section->name,
+                $overtime->employee_name,
+                $overtime->start_time,
+                $overtime->end_time,
+                number_format($overtime->total_hours, 2),
+                ucfirst($overtime->type),
+                $overtime->work_description,
+                ucfirst($overtime->status),
+                $overtime->approver ? $overtime->approver->name : '',
+                $overtime->creator->name,
+                $overtime->created_at->format('d/m/Y H:i'),
+            ], null, 'A' . $row);
+            $row++;
+        }
+
+        $lastCol = 'L';
+        $headerStyle = [
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '4F46E5']],
         ];
-        
-        $callback = function() use ($overtimes) {
-            $file = fopen('php://output', 'w');
-            
-            // BOM for UTF-8
-            fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
-            
-            // Header
-            fputcsv($file, ['Tanggal', 'Seksi', 'Nama Pegawai', 'Jam Mulai', 'Jam Selesai', 'Total Jam', 'Tipe', 'Deskripsi', 'Status', 'Disetujui Oleh', 'Dibuat Oleh', 'Dibuat Pada']);
-            
-            // Data
-            foreach ($overtimes as $overtime) {
-                fputcsv($file, [
-                    $overtime->date->format('d/m/Y'),
-                    $overtime->section->name,
-                    $overtime->employee_name,
-                    $overtime->start_time,
-                    $overtime->end_time,
-                    number_format($overtime->total_hours, 2),
-                    ucfirst($overtime->type),
-                    $overtime->work_description,
-                    ucfirst($overtime->status),
-                    $overtime->approver ? $overtime->approver->name : '',
-                    $overtime->creator->name,
-                    $overtime->created_at->format('d/m/Y H:i'),
-                ]);
-            }
-            
-            fclose($file);
-        };
-        
-        return response()->stream($callback, 200, $headers);
+        $sheet->getStyle('A1:' . $lastCol . '1')->applyFromArray($headerStyle);
+        foreach (range('A', $lastCol) as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        $writer = new Xlsx($spreadsheet);
+        $filename = 'overtime_' . date('Ymd_His') . '.xlsx';
+
+        return response()->streamDownload(function () use ($writer) {
+            $writer->save('php://output');
+        }, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
     }
     
     /**
@@ -1411,5 +1421,141 @@ class OvertimeController extends Controller
         
         // Return print-friendly view
         return view('overtimes.print-report', $data);
+    }
+
+    public function importForm()
+    {
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
+        $sections = $user->canManageAllSections() ? Section::orderBy('name')->get() : collect([$user->section]);
+        return view('overtimes.import', compact('sections'));
+    }
+
+    public function import(Request $request)
+    {
+        $request->validate([
+            'file'       => 'required|file|mimes:xlsx,xls|max:5120',
+            'section_id' => 'nullable|exists:sections,id',
+        ]);
+
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
+
+        try {
+            $spreadsheet = IOFactory::load($request->file('file')->getPathname());
+            $sheet = $spreadsheet->getActiveSheet();
+            $rows  = $sheet->toArray(null, true, true, true);
+        } catch (\Exception $e) {
+            return back()->withErrors(['file' => 'File tidak dapat dibaca: ' . $e->getMessage()]);
+        }
+
+        // Determine section
+        if ($user->canManageAllSections()) {
+            $sectionId = $request->section_id;
+        } else {
+            $sectionId = $user->section_id;
+        }
+
+        if (!$sectionId) {
+            return back()->withErrors(['section_id' => 'Seksi harus dipilih.']);
+        }
+
+        $imported = 0;
+        $skipped  = [];
+        $batchId  = 'OT-' . time() . '-' . $user->id . '-' . uniqid();
+        $validTypes = ['regular', 'additional'];
+
+        foreach ($rows as $i => $row) {
+            if ($i === 1) continue;
+
+            $date         = trim($row['A'] ?? '');
+            $employeeName = trim($row['B'] ?? '');
+            $startTime    = trim($row['C'] ?? '');
+            $endTime      = trim($row['D'] ?? '');
+            $description  = trim($row['E'] ?? '');
+            $type         = strtolower(trim($row['F'] ?? 'regular'));
+
+            if ($date === '' && $employeeName === '') continue;
+
+            if ($date === '' || $employeeName === '' || $startTime === '' || $endTime === '') {
+                $skipped[] = "Baris $i: Tanggal, Nama, Jam Mulai, atau Jam Selesai kosong";
+                continue;
+            }
+
+            // Parse date
+            try {
+                $parsedDate = \Carbon\Carbon::parse($date)->format('Y-m-d');
+            } catch (\Exception $e) {
+                $skipped[] = "Baris $i ($employeeName): Format tanggal tidak valid";
+                continue;
+            }
+
+            if (!in_array($type, $validTypes)) {
+                $type = 'regular';
+            }
+
+            // Calculate total hours
+            $start = \Carbon\Carbon::parse($startTime);
+            $end   = \Carbon\Carbon::parse($endTime);
+            $totalHours = abs($start->diffInMinutes($end)) / 60;
+
+            // Each row = new batch entry (group all rows in this file per same date under one batch)
+            Overtime::create([
+                'batch_id'         => $batchId,
+                'section_id'       => $sectionId,
+                'date'             => $parsedDate,
+                'employee_name'    => $employeeName,
+                'start_time'       => $startTime,
+                'end_time'         => $endTime,
+                'total_hours'      => $totalHours,
+                'work_description' => $description,
+                'type'             => $type,
+                'status'           => 'pending',
+                'created_by'       => $user->id,
+            ]);
+            $imported++;
+        }
+
+        $message = "Berhasil import $imported data overtime.";
+        if ($skipped) {
+            $message .= ' Dilewati: ' . implode('; ', $skipped);
+        }
+
+        return redirect()->route('overtimes.index')->with('success', $message);
+    }
+
+    public function downloadTemplate()
+    {
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Overtime');
+
+        $headers = ['Tanggal (YYYY-MM-DD)', 'Nama Karyawan', 'Jam Mulai (HH:MM)', 'Jam Selesai (HH:MM)', 'Deskripsi Kerja', 'Jenis (regular/additional)'];
+        $sheet->fromArray($headers, null, 'A1');
+        foreach (range('A', 'F') as $col) {
+            $sheet->getColumnDimension($col)->setWidth(28);
+        }
+
+        $samples = [
+            ['2026-04-10', 'Budi Santoso', '17:00', '20:00', 'Pekerjaan tambahan proyek X', 'regular'],
+            ['2026-04-10', 'Siti Rahayu', '17:00', '20:00', 'Pekerjaan tambahan proyek X', 'regular'],
+        ];
+        foreach ($samples as $rowIdx => $sample) {
+            $sheet->fromArray($sample, null, 'A' . ($rowIdx + 2));
+        }
+
+        $headerStyle = [
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+            'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => '4F46E5']],
+        ];
+        $sheet->getStyle('A1:F1')->applyFromArray($headerStyle);
+
+        $writer = new Xlsx($spreadsheet);
+
+        return response()->streamDownload(function () use ($writer) {
+            $writer->save('php://output');
+        }, 'template_import_overtime.xlsx', [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
     }
 }

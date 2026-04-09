@@ -8,6 +8,9 @@ use App\Models\Section;
 use App\Http\Requests\StoreStockMovementRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
 
 class StockMovementController extends Controller
 {
@@ -154,40 +157,47 @@ class StockMovementController extends Controller
         }
         
         $movements = $query->orderBy('created_at', 'desc')->get();
-        
-        $filename = 'stock_movements_' . date('Ymd_His') . '.csv';
-        $headers = [
-            'Content-Type' => 'text/csv',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Stock Movements');
+
+        $headers = ['Tanggal', 'Item', 'Seksi', 'Tipe', 'Qty', 'Stok Sebelum', 'Stok Sesudah', 'Catatan', 'Dibuat Oleh'];
+        $sheet->fromArray($headers, null, 'A1');
+
+        $row = 2;
+        foreach ($movements as $movement) {
+            $sheet->fromArray([
+                $movement->created_at->format('d/m/Y H:i'),
+                $movement->consumable->name,
+                $movement->consumable->section->name,
+                strtoupper($movement->type),
+                number_format($movement->quantity, 0, ',', '.'),
+                number_format($movement->stock_before, 0, ',', '.'),
+                number_format($movement->stock_after, 0, ',', '.'),
+                $movement->notes ?? '',
+                $movement->creator->name,
+            ], null, 'A' . $row);
+            $row++;
+        }
+
+        $lastCol = 'I';
+        $headerStyle = [
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '4F46E5']],
         ];
-        
-        $callback = function() use ($movements) {
-            $file = fopen('php://output', 'w');
-            
-            // BOM for UTF-8
-            fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
-            
-            // Header
-            fputcsv($file, ['Tanggal', 'Item', 'Seksi', 'Tipe', 'Qty', 'Stok Sebelum', 'Stok Sesudah', 'Catatan', 'Dibuat Oleh']);
-            
-            // Data
-            foreach ($movements as $movement) {
-                fputcsv($file, [
-                    $movement->created_at->format('d/m/Y H:i'),
-                    $movement->consumable->name,
-                    $movement->consumable->section->name,
-                    strtoupper($movement->type),
-                    number_format($movement->quantity, 0, ',', '.'),
-                    number_format($movement->stock_before, 0, ',', '.'),
-                    number_format($movement->stock_after, 0, ',', '.'),
-                    $movement->notes ?? '',
-                    $movement->creator->name,
-                ]);
-            }
-            
-            fclose($file);
-        };
-        
-        return response()->stream($callback, 200, $headers);
+        $sheet->getStyle('A1:' . $lastCol . '1')->applyFromArray($headerStyle);
+        foreach (range('A', $lastCol) as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        $writer = new Xlsx($spreadsheet);
+        $filename = 'stock_movements_' . date('Ymd_His') . '.xlsx';
+
+        return response()->streamDownload(function () use ($writer) {
+            $writer->save('php://output');
+        }, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
     }
 }

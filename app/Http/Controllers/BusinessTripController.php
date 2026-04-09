@@ -8,6 +8,9 @@ use App\Http\Requests\StoreBusinessTripRequest;
 use App\Http\Requests\UpdateBusinessTripRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
 
 class BusinessTripController extends Controller
 {
@@ -311,14 +314,11 @@ class BusinessTripController extends Controller
         $user = auth()->user();
         $query = BusinessTrip::with(['section', 'creator', 'approver']);
         
-        // Apply same filter logic as index
         if ($user->canManageAllSections()) {
             // Super admin can see all
         } elseif ($user->canApproveBusinessTrips() || $user->isLeaderOrForeman()) {
-            // Leader/Foreman can see all data in their section
             $query->where('section_id', $user->section_id);
         } else {
-            // Regular users only see their own data
             $query->where('created_by', $user->id);
         }
         
@@ -336,44 +336,51 @@ class BusinessTripController extends Controller
         }
         
         $trips = $query->orderBy('departure_date', 'desc')->get();
-        
-        $filename = 'business_trips_' . date('Ymd_His') . '.csv';
-        $headers = [
-            'Content-Type' => 'text/csv',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Perjalanan Dinas');
+
+        $headers = ['Nomor Surat', 'Seksi', 'Nama Pegawai', 'Tujuan', 'Tanggal Berangkat', 'Tanggal Kembali', 'Keperluan', 'Transport', 'Estimasi Biaya', 'Status', 'Disetujui Oleh', 'Dibuat Oleh', 'Dibuat Pada'];
+        $sheet->fromArray($headers, null, 'A1');
+
+        $row = 2;
+        foreach ($trips as $trip) {
+            $sheet->fromArray([
+                $trip->letter_number,
+                $trip->section->name,
+                $trip->employee_name,
+                $trip->destination,
+                $trip->departure_date->format('d/m/Y'),
+                $trip->return_date->format('d/m/Y'),
+                $trip->purpose,
+                $trip->transport,
+                $trip->estimated_cost ? number_format($trip->estimated_cost, 0, ',', '.') : '',
+                ucfirst($trip->status),
+                $trip->approver ? $trip->approver->name : '',
+                $trip->creator->name,
+                $trip->created_at->format('d/m/Y H:i'),
+            ], null, 'A' . $row);
+            $row++;
+        }
+
+        $lastCol = 'M';
+        $headerStyle = [
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '4F46E5']],
         ];
-        
-        $callback = function() use ($trips) {
-            $file = fopen('php://output', 'w');
-            
-            // BOM for UTF-8
-            fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
-            
-            // Header
-            fputcsv($file, ['Nomor Surat', 'Seksi', 'Nama Pegawai', 'Tujuan', 'Tanggal Berangkat', 'Tanggal Kembali', 'Keperluan', 'Transport', 'Estimasi Biaya', 'Status', 'Disetujui Oleh', 'Dibuat Oleh', 'Dibuat Pada']);
-            
-            // Data
-            foreach ($trips as $trip) {
-                fputcsv($file, [
-                    $trip->letter_number,
-                    $trip->section->name,
-                    $trip->employee_name,
-                    $trip->destination,
-                    $trip->departure_date->format('d/m/Y'),
-                    $trip->return_date->format('d/m/Y'),
-                    $trip->purpose,
-                    $trip->transport,
-                    $trip->estimated_cost ? number_format($trip->estimated_cost, 0, ',', '.') : '',
-                    ucfirst($trip->status),
-                    $trip->approver ? $trip->approver->name : '',
-                    $trip->creator->name,
-                    $trip->created_at->format('d/m/Y H:i'),
-                ]);
-            }
-            
-            fclose($file);
-        };
-        
-        return response()->stream($callback, 200, $headers);
+        $sheet->getStyle('A1:' . $lastCol . '1')->applyFromArray($headerStyle);
+        foreach (range('A', $lastCol) as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        $writer = new Xlsx($spreadsheet);
+        $filename = 'business_trips_' . date('Ymd_His') . '.xlsx';
+
+        return response()->streamDownload(function () use ($writer) {
+            $writer->save('php://output');
+        }, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
     }
 }

@@ -69,6 +69,11 @@ Route::middleware('auth')->group(function () {
         Route::post('overtimes/manager-bulk-reject', [OvertimeController::class, 'managerBulkReject'])->name('overtimes.manager.bulk-reject');
     });
     
+    // Overtime Import Excel
+    Route::get('overtimes/import', [OvertimeController::class, 'importForm'])->name('overtimes.import.form');
+    Route::post('overtimes/import', [OvertimeController::class, 'import'])->name('overtimes.import');
+    Route::get('overtimes/import/template', [OvertimeController::class, 'downloadTemplate'])->name('overtimes.import.template');
+
     // Overtime PDF Report
     Route::middleware('permission:print-overtime-report')->group(function () {
         Route::get('overtimes/pdf', [OvertimeController::class, 'showGeneratePDFForm'])->name('overtimes.pdf');
@@ -111,6 +116,9 @@ Route::middleware('auth')->group(function () {
     
     // Cards (E-Money Management)
     Route::get('cards', [CardController::class, 'index'])->name('cards.index');
+    Route::get('cards/import', [CardController::class, 'importForm'])->name('cards.import.form');
+    Route::post('cards/import', [CardController::class, 'import'])->name('cards.import');
+    Route::get('cards/import/template', [CardController::class, 'downloadTemplate'])->name('cards.import.template');
     Route::get('cards/create', [CardController::class, 'create'])->name('cards.create');
     Route::post('cards', [CardController::class, 'store'])->name('cards.store');
     Route::get('cards/active', [CardController::class, 'getActiveCards'])->name('cards.active');
@@ -122,6 +130,9 @@ Route::middleware('auth')->group(function () {
     
     // Consumables
     Route::get('consumables', [ConsumableController::class, 'index'])->name('consumables.index');
+    Route::get('consumables/import', [ConsumableController::class, 'importForm'])->name('consumables.import.form');
+    Route::post('consumables/import', [ConsumableController::class, 'import'])->name('consumables.import');
+    Route::get('consumables/import/template', [ConsumableController::class, 'downloadTemplate'])->name('consumables.import.template');
     Route::get('consumables/master-items', [ConsumableController::class, 'masterItems'])->name('consumables.master-items');
     Route::get('consumables/create', [ConsumableController::class, 'create'])->name('consumables.create');
     Route::post('consumables', [ConsumableController::class, 'store'])->name('consumables.store');
@@ -139,6 +150,9 @@ Route::middleware('auth')->group(function () {
     
     // Employees (Master Data) — static routes MUST come before wildcard routes
     Route::get('employees/search', [EmployeeController::class, 'search'])->name('employees.search')->middleware('permission:view-employees,create-overtime,create-absence,create-business-trip');
+    Route::get('employees/import', [EmployeeController::class, 'importForm'])->name('employees.import.form')->middleware('permission:create-employee');
+    Route::post('employees/import', [EmployeeController::class, 'import'])->name('employees.import')->middleware('permission:create-employee');
+    Route::get('employees/import/template', [EmployeeController::class, 'downloadTemplate'])->name('employees.import.template')->middleware('permission:create-employee');
     Route::get('employees', [EmployeeController::class, 'index'])->name('employees.index')->middleware('permission:view-employees');
     Route::get('employees/create', [EmployeeController::class, 'create'])->name('employees.create')->middleware('permission:create-employee');
     Route::post('employees', [EmployeeController::class, 'store'])->name('employees.store')->middleware('permission:create-employee');
@@ -154,6 +168,9 @@ Route::middleware('auth')->group(function () {
     Route::middleware('permission:create-break-time')->group(function () {
         Route::get('break-times/create', [BreakTimeController::class, 'create'])->name('break-times.create');
         Route::post('break-times', [BreakTimeController::class, 'store'])->name('break-times.store');
+        Route::get('break-times/import', [BreakTimeController::class, 'importForm'])->name('break-times.import.form');
+        Route::post('break-times/import', [BreakTimeController::class, 'import'])->name('break-times.import');
+        Route::get('break-times/import/template', [BreakTimeController::class, 'downloadTemplate'])->name('break-times.import.template');
     });
     Route::middleware('permission:edit-break-time')->group(function () {
         Route::get('break-times/{breakTime}/edit', [BreakTimeController::class, 'edit'])->name('break-times.edit');

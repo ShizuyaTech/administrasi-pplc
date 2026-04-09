@@ -7,6 +7,9 @@ use App\Models\Section;
 use App\Http\Requests\StoreConsumableRequest;
 use App\Http\Requests\UpdateConsumableRequest;
 use Illuminate\Http\Request;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class ConsumableController extends Controller
 {
@@ -159,5 +162,108 @@ class ConsumableController extends Controller
         $consumable->delete();
         
         return redirect()->route('consumables.index')->with('success', 'Item consumable berhasil dihapus.');
+    }
+
+    public function importForm()
+    {
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
+        $sections = $user->canManageAllSections() ? Section::orderBy('name')->get() : collect([$user->section]);
+        return view('consumables.import', compact('sections'));
+    }
+
+    public function import(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:xlsx,xls|max:5120',
+        ]);
+
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
+        $sections = Section::pluck('id', 'name')->mapWithKeys(fn($id, $name) => [strtolower($name) => $id]);
+
+        try {
+            $spreadsheet = IOFactory::load($request->file('file')->getPathname());
+            $sheet = $spreadsheet->getActiveSheet();
+            $rows  = $sheet->toArray(null, true, true, true);
+        } catch (\Exception $e) {
+            return back()->withErrors(['file' => 'File tidak dapat dibaca: ' . $e->getMessage()]);
+        }
+
+        $imported = 0;
+        $skipped  = [];
+
+        foreach ($rows as $i => $row) {
+            if ($i === 1) continue;
+
+            $name     = trim($row['A'] ?? '');
+            $unit     = trim($row['B'] ?? '');
+            $stock    = $row['C'] ?? 0;
+            $minStock = $row['D'] ?? 0;
+            $sectionN = strtolower(trim($row['E'] ?? ''));
+
+            if ($name === '' && $unit === '') continue;
+
+            if ($name === '' || $unit === '') {
+                $skipped[] = "Baris $i: Nama atau Satuan kosong";
+                continue;
+            }
+
+            if ($user->canManageAllSections()) {
+                $sectionId = $sections[$sectionN] ?? null;
+                if (!$sectionId) {
+                    $skipped[] = "Baris $i ($name): Seksi '$sectionN' tidak ditemukan";
+                    continue;
+                }
+            } else {
+                $sectionId = $user->section_id;
+            }
+
+            Consumable::create([
+                'section_id'    => $sectionId,
+                'name'          => $name,
+                'unit'          => $unit,
+                'current_stock' => (int) $stock,
+                'minimum_stock' => (int) $minStock,
+            ]);
+            $imported++;
+        }
+
+        $message = "Berhasil import $imported item consumable.";
+        if ($skipped) {
+            $message .= ' Dilewati: ' . implode('; ', $skipped);
+        }
+
+        return redirect()->route('consumables.index')->with('success', $message);
+    }
+
+    public function downloadTemplate()
+    {
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Consumable');
+
+        $headers = ['Nama Item', 'Satuan', 'Stok Awal', 'Stok Minimum', 'Seksi (jika Super Admin)'];
+        $sheet->fromArray($headers, null, 'A1');
+        foreach (range('A', 'E') as $col) {
+            $sheet->getColumnDimension($col)->setWidth(28);
+        }
+
+        $sample = ['Kertas A4', 'Rim', 100, 10, 'Seksi IT'];
+        $sheet->fromArray($sample, null, 'A2');
+
+        $headerStyle = [
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+            'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => '4F46E5']],
+        ];
+        $sheet->getStyle('A1:E1')->applyFromArray($headerStyle);
+
+        $writer = new Xlsx($spreadsheet);
+
+        return response()->streamDownload(function () use ($writer) {
+            $writer->save('php://output');
+        }, 'template_import_consumable.xlsx', [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
     }
 }

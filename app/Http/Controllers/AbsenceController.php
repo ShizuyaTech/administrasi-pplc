@@ -8,6 +8,9 @@ use App\Http\Requests\StoreAbsenceRequest;
 use App\Http\Requests\UpdateAbsenceRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
 
 class AbsenceController extends Controller
 {
@@ -210,14 +213,11 @@ class AbsenceController extends Controller
         $user = auth()->user();
         $query = Absence::with(['section', 'creator']);
         
-        // Apply same filter logic as index
         if ($user->canManageAllSections()) {
             // Super admin can see all
         } elseif ($user->isLeaderOrForeman()) {
-            // Leader/Foreman can see all data in their section
             $query->where('section_id', $user->section_id);
         } else {
-            // Regular users only see their own data
             $query->where('created_by', $user->id);
         }
         
@@ -232,41 +232,48 @@ class AbsenceController extends Controller
         }
         
         $absences = $query->orderBy('date', 'desc')->get();
-        
-        $filename = 'absensi_' . date('Ymd_His') . '.csv';
-        $headers = [
-            'Content-Type' => 'text/csv',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Absensi');
+
+        $headers = ['Tanggal', 'Seksi', 'Hadir', 'Sakit', 'Izin', 'Cuti', 'Total Member', 'Catatan', 'Dibuat Oleh', 'Dibuat Pada'];
+        $sheet->fromArray($headers, null, 'A1');
+
+        $row = 2;
+        foreach ($absences as $absence) {
+            $sheet->fromArray([
+                $absence->date->format('d/m/Y'),
+                $absence->section->name,
+                $absence->present,
+                $absence->sick,
+                $absence->permission,
+                $absence->leave,
+                $absence->total_members,
+                $absence->notes ?? '',
+                $absence->creator->name,
+                $absence->created_at->format('d/m/Y H:i'),
+            ], null, 'A' . $row);
+            $row++;
+        }
+
+        $lastCol = 'J';
+        $headerStyle = [
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '4F46E5']],
         ];
-        
-        $callback = function() use ($absences) {
-            $file = fopen('php://output', 'w');
-            
-            // BOM for UTF-8
-            fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
-            
-            // Header
-            fputcsv($file, ['Tanggal', 'Seksi', 'Hadir', 'Sakit', 'Izin', 'Cuti', 'Total Member', 'Catatan', 'Dibuat Oleh', 'Dibuat Pada']);
-            
-            // Data
-            foreach ($absences as $absence) {
-                fputcsv($file, [
-                    $absence->date->format('d/m/Y'),
-                    $absence->section->name,
-                    $absence->present,
-                    $absence->sick,
-                    $absence->permission,
-                    $absence->leave,
-                    $absence->total_members,
-                    $absence->notes ?? '',
-                    $absence->creator->name,
-                    $absence->created_at->format('d/m/Y H:i'),
-                ]);
-            }
-            
-            fclose($file);
-        };
-        
-        return response()->stream($callback, 200, $headers);
+        $sheet->getStyle('A1:' . $lastCol . '1')->applyFromArray($headerStyle);
+        foreach (range('A', $lastCol) as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        $writer = new Xlsx($spreadsheet);
+        $filename = 'absensi_' . date('Ymd_His') . '.xlsx';
+
+        return response()->streamDownload(function () use ($writer) {
+            $writer->save('php://output');
+        }, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
     }
 }
