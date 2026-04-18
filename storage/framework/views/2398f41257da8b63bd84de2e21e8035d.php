@@ -40,9 +40,9 @@
     </div>
 
     <!-- Actions -->
-    <div class="flex justify-between items-center">
+    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
         <h2 class="text-lg font-semibold text-gray-800">Daftar SPD</h2>
-        <div class="flex space-x-3">
+        <div class="flex flex-wrap gap-2">
             <?php if(auth()->user()->hasPermission('export-business-trips')): ?>
             <a href="<?php echo e(route('business-trips.export', request()->query())); ?>" class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg inline-flex items-center">
                 <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -65,7 +65,7 @@
     <!-- Table -->
     <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <div class="overflow-x-auto">
-            <table class="w-full">
+            <table class="w-full min-w-[640px]">
                 <thead class="bg-gray-50 border-b">
                     <tr>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">No. Surat</th>

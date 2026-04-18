@@ -37,13 +37,13 @@
     @if(count($grouped) > 0)
         <!-- Approval Summary -->
         <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <div class="flex items-center justify-between">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div>
                     <p class="text-sm text-blue-800">
                         <strong><span x-text="selectedCount"></span> karyawan dipilih</strong>
                     </p>
                 </div>
-                <div class="flex space-x-3">
+                <div class="flex flex-wrap gap-2">
                     <button @click="approveSelected" 
                             x-show="selectedCount > 0"
                             class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg">
@@ -101,7 +101,7 @@
 
                                 <!-- Employees Table -->
                                 <div class="overflow-x-auto">
-                                    <table class="w-full">
+                                    <table class="w-full min-w-[560px]">
                                         <thead class="bg-gray-100">
                                             <tr>
                                                 <th class="px-4 py-2 text-left text-xs font-medium text-gray-600 w-10">

@@ -80,12 +80,12 @@
         </div>
 
         <!-- Actions -->
-        <div class="bg-gray-50 px-6 py-4 border-t border-gray-200 flex justify-between">
+        <div class="bg-gray-50 px-6 py-4 border-t border-gray-200 flex flex-col sm:flex-row sm:justify-between gap-3">
             <a href="{{ route('employees.index') }}" 
-               class="px-6 py-2 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-100">
+               class="px-6 py-2 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-100 text-center">
                 Kembali
             </a>
-            <div class="flex space-x-3">
+            <div class="flex flex-wrap gap-2">
                 <a href="{{ route('employees.edit', $employee) }}" 
                    class="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg">
                     Edit Data

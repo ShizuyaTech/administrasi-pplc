@@ -6,7 +6,7 @@
 @section('content')
 <div class="space-y-6">
     <!-- Header -->
-    <div class="flex justify-between items-center">
+    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
         <div>
             <h2 class="text-lg font-semibold text-gray-800">Penugasan Section ke Supervisor & Manager</h2>
             <p class="text-sm text-gray-600 mt-1">Kelola section yang dapat dikelola oleh Supervisor dan Manager</p>

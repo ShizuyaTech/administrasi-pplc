@@ -6,10 +6,10 @@
 @section('content')
 <div class="space-y-6">
     <!-- Action Buttons -->
-    <div class="flex justify-between items-center">
+    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
         <h2 class="text-lg font-semibold text-gray-800">Daftar Jam Istirahat</h2>
         @if(auth()->user()->hasPermission('create-break-time'))
-        <div class="flex items-center space-x-2">
+        <div class="flex flex-wrap gap-2">
             <a href="{{ route('break-times.import.form') }}"
                class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition inline-flex items-center">
                 <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -31,7 +31,7 @@
     <!-- Data Table -->
     <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <div class="overflow-x-auto">
-            <table class="w-full">
+            <table class="w-full min-w-[480px]">
                 <thead class="bg-gray-50 border-b border-gray-200">
                     <tr>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama</th>

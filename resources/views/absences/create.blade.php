@@ -89,7 +89,7 @@
             </div>
 
             <!-- Attendance Numbers Grid -->
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                 <!-- Present -->
                 <div>
                     <label for="present" class="block text-sm font-medium text-gray-700 mb-2">

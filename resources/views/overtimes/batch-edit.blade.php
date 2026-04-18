@@ -45,7 +45,7 @@
             @method('PUT')
 
             <!-- Waktu Overtime (Sama untuk Semua) -->
-            <div class="grid grid-cols-2 gap-6 mb-6 p-4 border border-gray-300 rounded-lg bg-blue-50">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6 p-4 border border-gray-300 rounded-lg bg-blue-50">
                 <div>
                     <label for="start_time" class="block text-sm font-medium text-gray-700 mb-2">
                         Jam Mulai <span class="text-red-500">*</span>

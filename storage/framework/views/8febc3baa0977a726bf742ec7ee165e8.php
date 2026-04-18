@@ -35,7 +35,7 @@
             
 
             <!-- User Menu -->
-            <div x-data="{ open: false }" class="relative hidden md:block">
+            <div x-data="{ open: false }" class="relative">
                 <button @click="open = !open" 
                         class="flex items-center space-x-3 p-2 hover:bg-gray-100 rounded-lg transition">
                     <div class="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center">

@@ -61,11 +61,11 @@
                 </div>
 
                 <!-- Action Buttons -->
-                <div class="flex justify-between items-center mt-8 pt-6 border-t border-gray-200">
+                <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mt-8 pt-6 border-t border-gray-200">
                     <div class="text-sm text-gray-600">
                         <strong>Note:</strong> Pilih permissions yang ingin diberikan ke role ini
                     </div>
-                    <div class="flex space-x-3">
+                    <div class="flex flex-wrap gap-2">
                         <button type="button" 
                                 onclick="uncheckAll()"
                                 class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition">

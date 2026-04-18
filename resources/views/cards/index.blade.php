@@ -13,7 +13,7 @@
                 <p class="text-sm text-gray-600">Kelola kartu Flazz, Brizzi, dan E-Toll untuk perjalanan dinas</p>
             </div>
             @if(auth()->user()->hasPermission('create-card'))
-            <div class="flex items-center space-x-2">
+            <div class="flex flex-wrap gap-2">
                 <a href="{{ route('cards.import.form') }}" class="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg">
                     <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
@@ -82,7 +82,7 @@
     <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         @if($cards->count() > 0)
         <div class="overflow-x-auto">
-            <table class="w-full">
+            <table class="w-full min-w-[500px]">
                 <thead class="bg-gray-50 border-b border-gray-200">
                     <tr>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nomor Kartu</th>

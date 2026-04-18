@@ -42,7 +42,7 @@
                 </div>
             </div>
 
-            <div class="grid grid-cols-2 gap-6 mb-6">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
                 <div>
                     <label for="start_time" class="block text-sm font-medium text-gray-700 mb-2">Jam Mulai <span class="text-red-500">*</span></label>
                     <input type="time" id="start_time" name="start_time" value="{{ old('start_time') }}" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 @error('start_time') border-red-500 @enderror">
@@ -56,7 +56,7 @@
             </div>
 
             <div class="mb-6">
-                <div class="flex justify-between items-center mb-4">
+                <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
                     <label class="block text-sm font-medium text-gray-700">Daftar Karyawan & Pekerjaan <span class="text-red-500">*</span></label>
                     <button type="button" @click="addEmployee()" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg">
                         <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -110,7 +110,7 @@
                 @enderror
             </div>
 
-            <div class="flex justify-end space-x-3">
+            <div class="flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
                 <a href="{{ route('overtimes.index') }}" class="px-6 py-3 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50">Batal</a>
                 <button type="submit" class="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg">Simpan Data</button>
             </div>

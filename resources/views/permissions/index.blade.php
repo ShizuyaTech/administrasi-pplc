@@ -6,7 +6,7 @@
 @section('content')
 <div class="space-y-6">
     <!-- Action Buttons -->
-    <div class="flex justify-between items-center">
+    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
         <h2 class="text-lg font-semibold text-gray-800">Daftar Permission</h2>
         <a href="{{ route('permissions.create') }}" 
            class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg transition inline-flex items-center">
